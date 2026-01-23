@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { background-color: #000; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chart-container { width: 80%; height: 70%; }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="voteChart"></canvas>
+    </div>
+
+    <script>
+        var socket = io();
+        var ctx = document.getElementById('voteChart').getContext('2d');
+        
+        // Initial Chart Setup
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['C1', 'C2', 'C3', 'C4'], // Placeholder
+                datasets: [{
+                    label: 'Live Votes',
+                    data: [0, 0, 0, 0],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)'
+                    ],
+                    borderColor: 'white',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: 'white' } },
+                    x: { ticks: { color: 'white', font: {size: 18} } }
+                },
+                plugins: { legend: { labels: { color: 'white' } } }
+            }
+        });
+
+        // Listen for updates
+        socket.on('update_scores', function(scores) {
+            // scores object looks like: {1: 10, 2: 5, ...}
+            // We need to map these to the chart arrays
+            var ids = Object.keys(scores);
+            var values = Object.values(scores);
+            
+            // In a real app, you'd match IDs to Names properly here
+            // For this test, we just update the data array directly
+            chart.data.datasets[0].data = values;
+            chart.update();
+        });
+    </script>
+</body>
+</html>
+
