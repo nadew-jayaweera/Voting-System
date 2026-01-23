@@ -21,10 +21,16 @@ ADMIN_PATH = (os.getenv('ADMIN_URL_PATH') or "/admin").strip()
 
 # --- DATA ---
 contestants = [
-    {"id": 1, "name": "Contestant 1"},
-    {"id": 2, "name": "Contestant 2"},
-    {"id": 3, "name": "Contestant 3"},
-    {"id": 4, "name": "Contestant 4"}
+    {"id": 1, "name": "John Doe"},
+    {"id": 2, "name": "Test Contestant"},
+    {"id": 3, "name": "Mary Jane"},
+    {"id": 4, "name": "Alice Smith"},
+    {"id": 5, "name": "Bob Johnson"},
+    {"id": 6, "name": "Charlie Brown"},
+    {"id": 7, "name": "Diana Prince"},
+    {"id": 8, "name": "Ethan Hunt"},
+    {"id": 9, "name": "Fiona Gallagher"},
+    {"id": 10, "name": "George Clooney"}
 ]
 
 # --- DATABASE SETUP ---
@@ -49,6 +55,9 @@ init_db()
 yes_counts = {c['id']: 0 for c in contestants}
 no_counts = {c['id']: 0 for c in contestants}
 
+# Create a mapping of contestant IDs to names
+contestant_names = {c['id']: c['name'] for c in contestants}
+
 current_state = {
     "active_contestant_id": None,
     "active_contestant_name": "",
@@ -62,6 +71,18 @@ def get_client_ip():
     if 'X-Forwarded-For' in request.headers:
         return request.headers.get('X-Forwarded-For').split(',')[0].strip()
     return request.remote_addr
+
+# --- HELPER: GET SCORES WITH NAMES ---
+def get_scores_with_names():
+    """Return scores with contestant names for frontend display"""
+    scores_data = {}
+    for c_id, count in yes_counts.items():
+        name = contestant_names.get(c_id, f'C{c_id}')
+        scores_data[c_id] = {
+            'name': name,
+            'votes': count
+        }
+    return scores_data
 
 # --- ROUTES ---
 
@@ -155,7 +176,7 @@ def auto_close_voting():
 @socketio.on('connect')
 def handle_connect():
     user_ip = get_client_ip()
-    emit('update_scores', yes_counts)
+    emit('update_scores', get_scores_with_names())
     emit('state_change', current_state)
     if user_ip in round_voters:
         emit('vote_success', {}, to=request.sid)
@@ -205,7 +226,7 @@ def reset_data():
     round_voters.clear()
     
     stop_voting() 
-    emit('update_scores', yes_counts, broadcast=True)
+    emit('update_scores', get_scores_with_names(), broadcast=True)
 
 @socketio.on('cast_vote')
 def handle_vote(data):
@@ -245,7 +266,7 @@ def handle_vote(data):
     round_voters.add(voter_ip)
     
     emit('vote_success', {}, to=request.sid)
-    emit('update_scores', yes_counts, broadcast=True)
+    emit('update_scores', get_scores_with_names(), broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)

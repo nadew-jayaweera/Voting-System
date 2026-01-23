@@ -210,11 +210,18 @@
         function refreshChart(scores) {
             if (!scores || Object.keys(scores).length === 0) return;
 
-            // Ensure consistent ordering by numeric key if possible
+            // Extract IDs and sort them
             var ids = Object.keys(scores).sort(function(a, b) { return Number(a) - Number(b); });
-            var values = ids.map(function(key) { return scores[key]; });
+            
+            // Get names and vote counts
+            var labels = ids.map(function(id) { 
+                return scores[id].name || ('C' + id);
+            });
+            var values = ids.map(function(id) { 
+                return scores[id].votes || 0;
+            });
 
-            chart.data.labels = ids.map(function(id, idx) { return 'C' + id; });
+            chart.data.labels = labels;
             chart.data.datasets[0].data = values;
             chart.data.datasets[0].backgroundColor = values.map(function(_, idx) {
                 return palette[idx % palette.length];
