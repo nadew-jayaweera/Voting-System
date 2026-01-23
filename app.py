@@ -50,6 +50,10 @@ round_voters = set()
 # --- ROUTES ---
 @app.route('/')
 def index():
+    return render_template('welcome.html')
+
+@app.route('/vote')
+def vote():
     return render_template('voter.html')
 
 @app.route('/admin')
