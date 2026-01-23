@@ -7,17 +7,22 @@
 </head>
 <body class="bg-light p-4">
     <div class="container">
+        
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Admin Control Panel</h1>
-            <button onclick="stopVoting()" class="btn btn-danger btn-lg">STOP LIVE VOTING</button>
+            <div class="d-flex gap-2">
+                <a href="/export" class="btn btn-primary">📊 Download Excel</a>
+                <button onclick="stopVoting()" class="btn btn-warning">STOP VOTING</button>
+                <button onclick="resetSystem()" class="btn btn-danger">⚠️ RESET ALL</button>
+            </div>
         </div>
 
-        <div class="card mb-4 border-warning">
+        <div class="card mb-4 border-secondary">
             <div class="card-body bg-white">
                 <div class="row align-items-center">
                     <div class="col-auto">
                         <label class="fw-bold">Safety Timeout (Seconds):</label>
-                        <small class="text-muted d-block">Auto-close if you forget (Default 5 mins)</small>
+                        <small class="text-muted d-block">Auto-close (Default 5 mins)</small>
                     </div>
                     <div class="col-auto">
                         <input type="number" id="timer-input" class="form-control" value="300">
@@ -58,6 +63,12 @@
 
         function stopVoting() {
             socket.emit('admin_stop_voting');
+        }
+
+        function resetSystem() {
+            if(confirm("⚠️ WARNING ⚠️\n\nThis will DELETE ALL VOTES from the database and reset scores to 0.\n\nDid you download the Excel file first?\n\nAre you sure you want to proceed?")) {
+                socket.emit('admin_reset_data');
+            }
         }
 
         socket.on('state_change', function(state) {
