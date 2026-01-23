@@ -2,54 +2,178 @@
 <html>
 <head>
     <title>Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 12% 18%, rgba(125, 211, 252, 0.14), transparent 32%),
+                  radial-gradient(circle at 85% 12%, rgba(192, 132, 252, 0.16), transparent 28%),
+                  #0b1020;
+            --panel: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.12);
+            --text-main: #f5f7ff;
+            --text-dim: #9fb0d8;
+            --accent: #7dd3fc;
+            --accent-2: #c084fc;
+            --good: #22c55e;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+            padding: 28px 16px 36px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .shell {
+            width: min(1100px, 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 32px; }
+        .sub { margin: 4px 0 0; color: var(--text-dim); }
+
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-glass {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text-main);
+            padding: 10px 14px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            text-decoration: none;
+        }
+        .btn-glass.primary { border-color: rgba(125, 211, 252, 0.5); color: var(--accent); }
+        .btn-glass.warn { border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; }
+        .btn-glass.danger { border-color: rgba(239, 68, 68, 0.5); color: #fecdd3; }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+        }
+
+        .form-inline { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+        .form-inline input { max-width: 140px; }
+        label { font-weight: 600; }
+        small { color: var(--text-dim); }
+
+        table { color: var(--text-main); margin: 0; }
+        thead { background: rgba(255, 255, 255, 0.06); }
+        th, td { vertical-align: middle; }
+        tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(125, 211, 252, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.35);
+            color: var(--accent);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .pill {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .pill .card-mini {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+        .card-mini .label { color: var(--text-dim); font-size: 14px; }
+        .card-mini .value { font-size: 20px; font-weight: 700; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 26px; }
+            .actions { width: 100%; }
+            .btn-glass { flex: 1 1 auto; text-align: center; }
+        }
+    </style>
 </head>
-<body class="bg-light p-4">
-    <div class="container">
-        
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Admin Control Panel</h1>
-            <div class="d-flex gap-2">
-                <a href="/export" class="btn btn-primary">📊 Download Excel</a>
-                <button onclick="stopVoting()" class="btn btn-warning">STOP VOTING</button>
-                <button onclick="resetSystem()" class="btn btn-danger">⚠️ RESET ALL</button>
+<body>
+    <div class="shell">
+        <div class="header">
+            <div>
+                <h1>Admin Control Panel</h1>
+                <p class="sub">Manage contestants, timers, and live status.</p>
+            </div>
+            <div class="actions">
+                <a href="/export" class="btn-glass primary">📊 Download Excel</a>
+                <button onclick="stopVoting()" class="btn-glass warn">⏸ Stop Voting</button>
+                <button onclick="resetSystem()" class="btn-glass danger">⚠ Reset All</button>
             </div>
         </div>
 
-        <div class="card mb-4 border-secondary">
-            <div class="card-body bg-white">
-                <div class="row align-items-center">
-                    <div class="col-auto">
-                        <label class="fw-bold">Safety Timeout (Seconds):</label>
-                        <small class="text-muted d-block">Auto-close (Default 5 mins)</small>
-                    </div>
-                    <div class="col-auto">
-                        <input type="number" id="timer-input" class="form-control" value="300">
-                    </div>
+        <div class="panel">
+            <div class="form-inline">
+                <div>
+                    <label>Safety Timeout (seconds)</label><br>
+                    <small>Auto-close (default 30 mins)</small>
+                </div>
+                <input type="number" id="timer-input" class="form-control" value="1800">
+                <span class="status">Live control</span>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th style="width: 90px;">ID</th><th>Contestant Name</th><th style="width: 160px;" class="text-end">Action</th></tr></thead>
+                    <tbody>
+                        {% for c in contestants %}
+                        <tr>
+                            <td>{{ c.id }}</td>
+                            <td><strong>{{ c.name }}</strong></td>
+                            <td class="text-end">
+                                <button onclick="startVoting({{ c.id }})" class="btn btn-success btn-sm">Start Voting</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="pill">
+                <div class="card-mini">
+                    <div class="label">Status</div>
+                    <div class="value" id="status-text">Ready</div>
+                </div>
+                <div class="card-mini">
+                    <div class="label">Active contestant</div>
+                    <div class="value" id="active-name">—</div>
                 </div>
             </div>
-        </div>
-
-        <table class="table table-striped table-hover bg-white shadow-sm rounded">
-            <thead class="table-dark"><tr><th>ID</th><th>Contestant Name</th><th>Action</th></tr></thead>
-            <tbody>
-                {% for c in contestants %}
-                <tr>
-                    <td>{{ c.id }}</td>
-                    <td><b>{{ c.name }}</b></td>
-                    <td>
-                        <button onclick="startVoting({{ c.id }})" class="btn btn-success btn-sm w-100">
-                            START VOTING
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <div class="alert alert-info mt-3">
-            <strong>Status:</strong> <span id="status-text">Ready</span>
         </div>
     </div>
 
@@ -66,17 +190,21 @@
         }
 
         function resetSystem() {
-            if(confirm("⚠️ WARNING ⚠️\n\nThis will DELETE ALL VOTES from the database and reset scores to 0.\n\nDid you download the Excel file first?\n\nAre you sure you want to proceed?")) {
+            if (confirm("Warning:\n\nThis will DELETE ALL VOTES from the database and reset scores to 0.\n\nDid you download the Excel file first?\n\nAre you sure you want to proceed?")) {
                 socket.emit('admin_reset_data');
             }
         }
 
         socket.on('state_change', function(state) {
             var statusSpan = document.getElementById('status-text');
+            var activeName = document.getElementById('active-name');
+
             if (state.active_contestant_id) {
-                statusSpan.innerHTML = "Voting LIVE for <b>" + state.active_contestant_name + "</b>";
+                statusSpan.textContent = 'Voting LIVE';
+                activeName.textContent = state.active_contestant_name;
             } else {
-                statusSpan.innerHTML = "Voting Closed";
+                statusSpan.textContent = 'Voting Closed';
+                activeName.textContent = '—';
             }
         });
     </script>

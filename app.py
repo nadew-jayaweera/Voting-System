@@ -47,9 +47,25 @@ current_state = {
 
 round_voters = set()
 
+# --- HELPER: GET REAL IP (FIX FOR NGROK) ---
+def get_client_ip():
+    """
+    Retrieves the real IP address of the user, even if they are behind 
+    a proxy like Ngrok, Cloudflare, or Render.
+    """
+    if 'X-Forwarded-For' in request.headers:
+        # The header often looks like: "Client-IP, Proxy-IP, ..."
+        # We want the first one (the Client).
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
+
 # --- ROUTES ---
 @app.route('/')
 def index():
+    return render_template('welcome.html')
+
+@app.route('/vote')
+def vote():
     return render_template('voter.html')
 
 @app.route('/admin')
@@ -95,16 +111,20 @@ def auto_close_voting():
 
 @socketio.on('connect')
 def handle_connect():
+    # Use the new IP helper here too!
+    user_ip = get_client_ip()
+    
     emit('update_scores', yes_counts)
     emit('state_change', current_state)
-    if request.remote_addr in round_voters:
+    
+    if user_ip in round_voters:
         emit('vote_success', {}, to=request.sid)
 
 @socketio.on('admin_start_voting')
 def start_voting(data):
     global round_voters
     c_id = int(data['id'])
-    duration = int(data.get('seconds', 300)) 
+    duration = int(data.get('seconds', 1800)) 
     
     c_name = next((c['name'] for c in contestants if c['id'] == c_id), "Unknown")
 
@@ -125,32 +145,29 @@ def stop_voting():
     current_state['end_time'] = 0
     emit('state_change', current_state, broadcast=True)
 
-# --- NEW: RESET SYSTEM ---
 @socketio.on('admin_reset_data')
 def reset_data():
     global yes_counts, no_counts, round_voters
     
-    # 1. Clear Database
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("DELETE FROM votes") # Deletes all data
+    c.execute("DELETE FROM votes") 
     conn.commit()
     conn.close()
 
-    # 2. Clear Memory
     yes_counts = {c['id']: 0 for c in contestants}
     no_counts = {c['id']: 0 for c in contestants}
     round_voters.clear()
     
-    # 3. Stop any active voting
     stop_voting() 
-
-    # 4. Refresh everyone's screen to 0
     emit('update_scores', yes_counts, broadcast=True)
 
 @socketio.on('cast_vote')
 def handle_vote(data):
-    voter_ip = request.remote_addr
+    # --- CRITICAL FIX: Use the helper function ---
+    voter_ip = get_client_ip()
+    # ---------------------------------------------
+
     vote_type = data.get('type', 'yes') 
     
     if current_state['active_contestant_id'] is None:
