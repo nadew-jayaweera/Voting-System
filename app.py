@@ -1,13 +1,23 @@
 import time
+import os
 import sqlite3
 import pandas as pd
 from threading import Timer
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, make_response
 from flask_socketio import SocketIO, emit
+from dotenv import load_dotenv
+
+# 1. LOAD SECRETS
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+# Ensure Secret Key is consistent.
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET', 'fallback_fixed_key_999')
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# 2. GET CONFIG FROM .ENV
+ADMIN_PASSWORD = (os.getenv('ADMIN_PASSWORD') or "1234").strip()
+ADMIN_PATH = (os.getenv('ADMIN_URL_PATH') or "/admin").strip()
 
 # --- DATA ---
 contestants = [
@@ -47,21 +57,73 @@ current_state = {
 
 round_voters = set()
 
+# --- HELPER: GET REAL IP (FIX FOR NGROK) ---
+def get_client_ip():
+    """
+    Retrieves the real IP address of the user, even if they are behind 
+    a proxy like Ngrok, Cloudflare, or Render.
+    """
+    if 'X-Forwarded-For' in request.headers:
+        # The header often looks like: "Client-IP, Proxy-IP, ..."
+        # We want the first one (the Client).
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
+
 # --- ROUTES ---
+
 @app.route('/')
 def index():
     return render_template('voter.html')
-
-@app.route('/admin')
-def admin():
-    return render_template('admin.html', contestants=contestants)
 
 @app.route('/screen')
 def screen():
     return render_template('screen.html')
 
+# --- LOGIN SYSTEM ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # If already logged in, send them straight to admin
+    if session.get('is_admin'):
+        return redirect(ADMIN_PATH)
+
+    if request.method == 'POST':
+        password_input = (request.form.get('password') or "").strip()
+        
+        if password_input == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            session.permanent = True  # Keep logged in (until logout)
+            return redirect(ADMIN_PATH)
+        else:
+            flash('Invalid Password')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear() # Destroy the "VIP Pass"
+    return redirect(url_for('login'))
+
+# --- THE HIDDEN ADMIN ROUTE ---
+@app.route(ADMIN_PATH)
+def admin_panel():
+    # SECURITY CHECK
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    
+    # RENDER WITH NO CACHE (Security Fix)
+    # This prevents the "Back Button" from showing the page after logout
+    response = make_response(render_template('admin.html', contestants=contestants))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @app.route('/export')
 def export_results():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
     conn = sqlite3.connect(DB_NAME)
     df = pd.read_sql_query("SELECT * FROM votes", conn)
     conn.close()
@@ -85,23 +147,28 @@ def export_results():
         
     return send_file(filename, as_attachment=True)
 
-# --- HELPERS ---
+# --- SOCKET EVENTS ---
+
 def auto_close_voting():
     with app.app_context():
         if current_state['active_contestant_id'] is not None:
             stop_voting()
 
-# --- SOCKET EVENTS ---
-
 @socketio.on('connect')
 def handle_connect():
+    # Use the new IP helper here too!
+    user_ip = get_client_ip()
+    
     emit('update_scores', yes_counts)
     emit('state_change', current_state)
-    if request.remote_addr in round_voters:
+    
+    if user_ip in round_voters:
         emit('vote_success', {}, to=request.sid)
 
 @socketio.on('admin_start_voting')
 def start_voting(data):
+    if not session.get('is_admin'): return 
+    
     global round_voters
     c_id = int(data['id'])
     duration = int(data.get('seconds', 300)) 
@@ -120,6 +187,8 @@ def start_voting(data):
 
 @socketio.on('admin_stop_voting')
 def stop_voting():
+    if not session.get('is_admin'): return 
+
     current_state['active_contestant_id'] = None
     current_state['active_contestant_name'] = ""
     current_state['end_time'] = 0
@@ -128,9 +197,10 @@ def stop_voting():
 # --- NEW: RESET SYSTEM ---
 @socketio.on('admin_reset_data')
 def reset_data():
+    if not session.get('is_admin'): return 
+
     global yes_counts, no_counts, round_voters
     
-    # 1. Clear Database
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("DELETE FROM votes") # Deletes all data
@@ -150,7 +220,10 @@ def reset_data():
 
 @socketio.on('cast_vote')
 def handle_vote(data):
-    voter_ip = request.remote_addr
+    # --- CRITICAL FIX: Use the helper function ---
+    voter_ip = get_client_ip()
+    # ---------------------------------------------
+
     vote_type = data.get('type', 'yes') 
     
     if current_state['active_contestant_id'] is None:

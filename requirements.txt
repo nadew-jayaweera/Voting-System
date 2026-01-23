@@ -3,3 +3,4 @@ flask-socketio
 eventlet
 pandas
 openpyxl
+python-dotenv
