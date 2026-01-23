@@ -57,21 +57,9 @@ current_state = {
 
 round_voters = set()
 
-<<<<<<< HEAD
 # --- HELPER: GET REAL IP ---
 def get_client_ip():
     if 'X-Forwarded-For' in request.headers:
-=======
-# --- HELPER: GET REAL IP (FIX FOR NGROK) ---
-def get_client_ip():
-    """
-    Retrieves the real IP address of the user, even if they are behind 
-    a proxy like Ngrok, Cloudflare, or Render.
-    """
-    if 'X-Forwarded-For' in request.headers:
-        # The header often looks like: "Client-IP, Proxy-IP, ..."
-        # We want the first one (the Client).
->>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
         return request.headers.get('X-Forwarded-For').split(',')[0].strip()
     return request.remote_addr
 
@@ -81,13 +69,10 @@ def get_client_ip():
 def index():
     return render_template('welcome.html')
 
-<<<<<<< HEAD
 @app.route('/vote')
 def vote():
     return render_template('voter.html')
 
-=======
->>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
 @app.route('/screen')
 def screen():
     return render_template('screen.html')
@@ -169,18 +154,9 @@ def auto_close_voting():
 
 @socketio.on('connect')
 def handle_connect():
-<<<<<<< HEAD
     user_ip = get_client_ip()
     emit('update_scores', yes_counts)
     emit('state_change', current_state)
-=======
-    # Use the new IP helper here too!
-    user_ip = get_client_ip()
-    
-    emit('update_scores', yes_counts)
-    emit('state_change', current_state)
-    
->>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
     if user_ip in round_voters:
         emit('vote_success', {}, to=request.sid)
 
@@ -218,10 +194,6 @@ def reset_data():
     if not session.get('is_admin'): return 
 
     global yes_counts, no_counts, round_voters
-<<<<<<< HEAD
-=======
-    
->>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("DELETE FROM votes") 
@@ -237,14 +209,7 @@ def reset_data():
 
 @socketio.on('cast_vote')
 def handle_vote(data):
-<<<<<<< HEAD
     voter_ip = get_client_ip()
-=======
-    # --- CRITICAL FIX: Use the helper function ---
-    voter_ip = get_client_ip()
-    # ---------------------------------------------
-
->>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
     vote_type = data.get('type', 'yes') 
     
     if current_state['active_contestant_id'] is None:
