@@ -62,6 +62,7 @@
             font-weight: 600;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
             text-decoration: none;
+<<<<<<< HEAD
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -72,6 +73,9 @@
         .btn-glass:active { transform: translateY(0); }
 
         .btn-glass.logout { border-color: rgba(255, 255, 255, 0.3); color: #fff; background: rgba(255, 255, 255, 0.1); }
+=======
+        }
+>>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
         .btn-glass.primary { border-color: rgba(125, 211, 252, 0.5); color: var(--accent); }
         .btn-glass.warn { border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; }
         .btn-glass.danger { border-color: rgba(239, 68, 68, 0.5); color: #fecdd3; }
@@ -86,13 +90,21 @@
         }
 
         .form-inline { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+<<<<<<< HEAD
         .form-inline input { max-width: 140px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 8px; }
+=======
+        .form-inline input { max-width: 140px; }
+>>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
         label { font-weight: 600; }
         small { color: var(--text-dim); }
 
         table { color: var(--text-main); margin: 0; }
         thead { background: rgba(255, 255, 255, 0.06); }
+<<<<<<< HEAD
         th, td { vertical-align: middle; border-color: var(--border); }
+=======
+        th, td { vertical-align: middle; }
+>>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
         tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
 
         .status {
@@ -136,8 +148,11 @@
                 <p class="sub">Manage contestants, timers, and live status.</p>
             </div>
             <div class="actions">
+<<<<<<< HEAD
                 <a href="/logout" class="btn-glass logout">🔒 Logout</a>
                 
+=======
+>>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
                 <a href="/export" class="btn-glass primary">📊 Download Excel</a>
                 <button onclick="stopVoting()" class="btn-glass warn">⏸ Stop Voting</button>
                 <button onclick="resetSystem()" class="btn-glass danger">⚠ Reset All</button>
@@ -212,11 +227,17 @@
 
             if (state.active_contestant_id) {
                 statusSpan.textContent = 'Voting LIVE';
+<<<<<<< HEAD
                 statusSpan.style.color = '#22c55e'; // Green text for live
                 activeName.textContent = state.active_contestant_name;
             } else {
                 statusSpan.textContent = 'Voting Closed';
                 statusSpan.style.color = '#ef4444'; // Red text for closed
+=======
+                activeName.textContent = state.active_contestant_name;
+            } else {
+                statusSpan.textContent = 'Voting Closed';
+>>>>>>> 73c80c0d607ae17622f08f4f33184fc587575e65
                 activeName.textContent = '—';
             }
         });
