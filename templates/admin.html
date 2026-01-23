@@ -1,130 +1,276 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>Admin Panel</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        :root {
-            --bg: radial-gradient(circle at 12% 18%, rgba(125, 211, 252, 0.14), transparent 32%),
-                  radial-gradient(circle at 85% 12%, rgba(192, 132, 252, 0.16), transparent 28%),
-                  #0b1020;
-            --panel: rgba(255, 255, 255, 0.06);
-            --border: rgba(255, 255, 255, 0.12);
-            --text-main: #f5f7ff;
-            --text-dim: #9fb0d8;
-            --accent: #7dd3fc;
-            --accent-2: #c084fc;
-            --good: #22c55e;
-            --warn: #f59e0b;
-            --danger: #ef4444;
+        * { 
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        * { box-sizing: border-box; }
         body {
-            margin: 0;
+            font-family: 'Space Grotesk', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            background: var(--bg);
-            color: var(--text-main);
-            font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
             padding: 28px 16px 36px;
             display: flex;
             justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveGrid 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
         }
 
         .shell {
             width: min(1100px, 100%);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 18px;
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 14px;
             justify-content: space-between;
             align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-radius: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
         }
 
-        h1 { margin: 0; font-size: 32px; }
-        .sub { margin: 4px 0 0; color: var(--text-dim); }
+        h1 { 
+            margin: 0; 
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .sub { 
+            margin: 6px 0 0; 
+            color: #666;
+            font-size: 0.95rem;
+        }
 
         .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
         .btn-glass {
             border-radius: 12px;
-            border: 1px solid var(--border);
-            background: var(--panel);
-            color: var(--text-main);
-            padding: 10px 14px;
-            font-weight: 600;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            padding: 10px 16px;
+            font-weight: 700;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
-        .btn-glass:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(0,0,0,0.45); }
+
+        .btn-glass:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
         .btn-glass:active { transform: translateY(0); }
 
-        .btn-glass.logout { border-color: rgba(255, 255, 255, 0.3); color: #fff; background: rgba(255, 255, 255, 0.1); }
-        .btn-glass.primary { border-color: rgba(125, 211, 252, 0.5); color: var(--accent); }
-        .btn-glass.warn { border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; }
-        .btn-glass.danger { border-color: rgba(239, 68, 68, 0.5); color: #fecdd3; }
-
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 18px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+        .btn-glass.logout { 
+            border-color: rgba(102, 126, 234, 0.4); 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
 
-        .form-inline { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
-        .form-inline input { max-width: 140px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 8px; }
-        label { font-weight: 600; }
-        small { color: var(--text-dim); }
+        .btn-glass.primary { 
+            border-color: rgba(34, 197, 94, 0.4); 
+            color: #16a34a;
+        }
 
-        table { color: var(--text-main); margin: 0; }
-        thead { background: rgba(255, 255, 255, 0.06); }
-        th, td { vertical-align: middle; border-color: var(--border); }
-        tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+        .btn-glass.warn { 
+            border-color: rgba(245, 158, 11, 0.4); 
+            color: #d97706;
+        }
+
+        .btn-glass.danger { 
+            border-color: rgba(239, 68, 68, 0.4); 
+            color: #dc2626;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 18px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-inline { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 16px; 
+            align-items: center; 
+        }
+
+        .form-inline input { 
+            max-width: 150px; 
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #333;
+            padding: 10px 14px; 
+            border-radius: 10px;
+            font-weight: 600;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-inline input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        label { 
+            font-weight: 700;
+            color: #333;
+        }
+
+        small { 
+            color: #666;
+            display: block;
+            margin-top: 4px;
+        }
+
+        table { 
+            color: #333;
+            margin: 0; 
+        }
+
+        thead { 
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        thead th {
+            font-weight: 700;
+            color: #667eea;
+            padding: 14px !important;
+        }
+
+        th, td { 
+            vertical-align: middle; 
+            border-color: #e0e0e0;
+            padding: 12px !important;
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover { 
+            background: rgba(102, 126, 234, 0.05);
+        }
 
         .status {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(125, 211, 252, 0.12);
-            border: 1px solid rgba(125, 211, 252, 0.35);
-            color: var(--accent);
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-weight: 600;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+            padding: 10px 16px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
         }
 
         .pill {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px;
+            gap: 14px;
         }
+
         .pill .card-mini {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            border: 2px solid rgba(102, 126, 234, 0.2);
             border-radius: 14px;
-            padding: 12px 14px;
+            padding: 14px 16px;
+            transition: all 0.3s ease;
         }
-        .card-mini .label { color: var(--text-dim); font-size: 14px; }
-        .card-mini .value { font-size: 20px; font-weight: 700; }
+
+        .pill .card-mini:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .card-mini .label { 
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .card-mini .value { 
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-top: 6px;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+            border: none !important;
+            font-weight: 700 !important;
+            padding: 8px 16px !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4) !important;
+        }
 
         @media (max-width: 768px) {
-            h1 { font-size: 26px; }
+            h1 { font-size: 1.6rem; }
+            .header { padding: 1.2rem 1.5rem; }
             .actions { width: 100%; }
-            .btn-glass { flex: 1 1 auto; text-align: center; }
+            .btn-glass { flex: 1 1 auto; text-align: center; font-size: 0.85rem; padding: 10px 12px; }
         }
     </style>
 </head>
@@ -136,11 +282,18 @@
                 <p class="sub">Manage contestants, timers, and live status.</p>
             </div>
             <div class="actions">
-                <a href="/logout" class="btn-glass logout">🔒 Logout</a>
-                
-                <a href="/export" class="btn-glass primary">📊 Download Excel</a>
-                <button onclick="stopVoting()" class="btn-glass warn">⏸ Stop Voting</button>
-                <button onclick="resetSystem()" class="btn-glass danger">⚠ Reset All</button>
+                <a href="/logout" class="btn-glass logout">
+                    <i class="fas fa-lock"></i> Logout
+                </a>
+                <a href="/export" class="btn-glass primary">
+                    <i class="fas fa-file-excel"></i> Download Excel
+                </a>
+                <button onclick="stopVoting()" class="btn-glass warn">
+                    <i class="fas fa-pause"></i> Stop Voting
+                </button>
+                <button onclick="resetSystem()" class="btn-glass danger">
+                    <i class="fas fa-triangle-exclamation"></i> Reset All
+                </button>
             </div>
         </div>
 
