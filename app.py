@@ -1,6 +1,8 @@
 import time
+import sqlite3
+import pandas as pd
 from threading import Timer
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
@@ -15,11 +17,28 @@ contestants = [
     {"id": 4, "name": "Contestant 4"}
 ]
 
-# Track Yes and No separately
+# --- DATABASE SETUP ---
+DB_NAME = "voting.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS votes
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  contestant_id INTEGER,
+                  contestant_name TEXT,
+                  vote_type TEXT,
+                  voter_ip TEXT,
+                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- GLOBAL STATE ---
 yes_counts = {c['id']: 0 for c in contestants}
 no_counts = {c['id']: 0 for c in contestants}
 
-# --- GLOBAL STATE ---
 current_state = {
     "active_contestant_id": None,
     "active_contestant_name": "",
@@ -41,7 +60,32 @@ def admin():
 def screen():
     return render_template('screen.html')
 
-# --- HELPER: AUTO-CLOSE VOTING ---
+@app.route('/export')
+def export_results():
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql_query("SELECT * FROM votes", conn)
+    conn.close()
+
+    if df.empty:
+        return "No votes recorded yet!"
+
+    summary = df.pivot_table(
+        index='contestant_name', 
+        columns='vote_type', 
+        values='id', 
+        aggfunc='count', 
+        fill_value=0
+    )
+    summary['Total Votes'] = summary.get('yes', 0) + summary.get('no', 0)
+
+    filename = "Competition_Results.xlsx"
+    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+        summary.to_excel(writer, sheet_name='Summary Table')
+        df.to_excel(writer, sheet_name='Raw Audit Log', index=False)
+        
+    return send_file(filename, as_attachment=True)
+
+# --- HELPERS ---
 def auto_close_voting():
     with app.app_context():
         if current_state['active_contestant_id'] is not None:
@@ -51,10 +95,8 @@ def auto_close_voting():
 
 @socketio.on('connect')
 def handle_connect():
-    # Send only YES counts to the screen/user by default
     emit('update_scores', yes_counts)
     emit('state_change', current_state)
-    
     if request.remote_addr in round_voters:
         emit('vote_success', {}, to=request.sid)
 
@@ -83,10 +125,33 @@ def stop_voting():
     current_state['end_time'] = 0
     emit('state_change', current_state, broadcast=True)
 
+# --- NEW: RESET SYSTEM ---
+@socketio.on('admin_reset_data')
+def reset_data():
+    global yes_counts, no_counts, round_voters
+    
+    # 1. Clear Database
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM votes") # Deletes all data
+    conn.commit()
+    conn.close()
+
+    # 2. Clear Memory
+    yes_counts = {c['id']: 0 for c in contestants}
+    no_counts = {c['id']: 0 for c in contestants}
+    round_voters.clear()
+    
+    # 3. Stop any active voting
+    stop_voting() 
+
+    # 4. Refresh everyone's screen to 0
+    emit('update_scores', yes_counts, broadcast=True)
+
 @socketio.on('cast_vote')
 def handle_vote(data):
     voter_ip = request.remote_addr
-    vote_type = data.get('type', 'yes') # Default to 'yes' if missing
+    vote_type = data.get('type', 'yes') 
     
     if current_state['active_contestant_id'] is None:
         return 
@@ -101,18 +166,26 @@ def handle_vote(data):
         return
 
     c_id = current_state['active_contestant_id']
+    c_name = current_state['active_contestant_name']
     
-    # LOGIC: Track separately
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO votes (contestant_id, contestant_name, vote_type, voter_ip) VALUES (?, ?, ?, ?)", 
+                  (c_id, c_name, vote_type, voter_ip))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("DB Error:", e)
+
     if vote_type == 'yes':
         yes_counts[c_id] += 1
     else:
         no_counts[c_id] += 1
-        # We do NOT subtract from yes_counts
     
     round_voters.add(voter_ip)
     
     emit('vote_success', {}, to=request.sid)
-    # Only broadcast the YES scores to the big screen
     emit('update_scores', yes_counts, broadcast=True)
 
 if __name__ == '__main__':
