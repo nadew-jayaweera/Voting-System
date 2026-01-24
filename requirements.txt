@@ -4,3 +4,4 @@ eventlet
 pandas
 openpyxl
 python-dotenv
+gunicorn
