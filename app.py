@@ -21,16 +21,17 @@ ADMIN_PATH = (os.getenv('ADMIN_URL_PATH') or "/admin").strip()
 
 # --- DATA ---
 contestants = [
-    {"id": 1, "name": "John Doe"},
-    {"id": 2, "name": "Test Contestant"},
-    {"id": 3, "name": "Mary Jane"},
-    {"id": 4, "name": "Alice Smith"},
-    {"id": 5, "name": "Bob Johnson"},
-    {"id": 6, "name": "Charlie Brown"},
-    {"id": 7, "name": "Diana Prince"},
-    {"id": 8, "name": "Ethan Hunt"},
-    {"id": 9, "name": "Fiona Gallagher"},
-    {"id": 10, "name": "George Clooney"}
+    {"id": 1, "name": "Khadeeja Mohamed Ashraff"},
+    {"id": 2, "name": "Tharanjee Dahanayaka"},
+    {"id": 3, "name": "S.D. Thalpawila"},
+    {"id": 4, "name": "Teesha Hewa Matarage"},
+    {"id": 5, "name": "Gallala Gamage Lakna Hansinee"},
+    {"id": 6, "name": "K.A.D.S. Jayalath"},
+    {"id": 7, "name": "E.A.T.K. Athukorala"},
+    {"id": 8, "name": "K.A. Hiruni Pabasara Warnasekara"},
+    {"id": 9, "name": "W.M.R.L. Walisundara"},
+    {"id": 10, "name": "V. Lochini Weerasekara"},
+    {"id": 11, "name": "U.L.C. Bhashitha"},
 ]
 
 # --- DATABASE SETUP ---
