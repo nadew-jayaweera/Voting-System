@@ -1,39 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Live Results</title>
+    <title>Live Results | Full Names</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        * { 
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Space Grotesk', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
-            padding: 32px;
+            align-items: flex-start;
+            padding: 16px;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         body::before {
             content: '';
             position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
+            top: -50%; left: -50%; width: 200%; height: 200%;
             background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
             background-size: 50px 50px;
             animation: moveGrid 20s linear infinite;
@@ -45,143 +37,142 @@
             100% { transform: translate(50px, 50px); }
         }
 
-        .shell {
-            width: min(1200px, 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            position: relative;
-            z-index: 1;
-            animation: fadeIn 0.6s ease-out;
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            }
+            50% { 
+                opacity: 0.7;
+                transform: scale(0.9);
+                box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+            }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
+
+        .shell { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 1; }
 
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 14px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 1.5rem 2rem;
+            padding: 1.2rem;
             border-radius: 18px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .title-wrap p { 
-            margin: 0 0 6px;
-            color: #667eea;
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         .title-wrap h1 { 
-            margin: 0; 
-            font-size: 2.2rem;
-            letter-spacing: 0.5px;
+            font-size: 1.5rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             font-weight: 700;
         }
 
-        .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(22, 163, 74, 0.12));
-            border: 2px solid rgba(34, 197, 94, 0.4);
-            padding: 12px 18px;
-            border-radius: 50px;
-            backdrop-filter: blur(10px);
-            font-weight: 700;
-            color: #16a34a;
-            font-size: 0.95rem;
-        }
-
-        .pulse-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
-            animation: pulse 1.8s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
-            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-        }
-
-        .meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 14px;
-        }
+        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         .pill {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
             border-radius: 16px;
-            padding: 1.2rem 1.5rem;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            padding: 1rem;
+            text-align: center;
         }
 
-        .pill:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .pill .label { 
-            color: #666;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .pill .value { 
-            font-size: 1.6rem;
-            font-weight: 700;
-            margin-top: 8px;
-            color: #667eea;
-        }
+        .pill .value { font-size: 1.2rem; font-weight: 700; color: #667eea; }
 
         .panel {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .chart-shell { 
-            position: relative; 
-            height: min(70vh, 620px);
+        /* --- UPDATED GRID LAYOUT FOR FULL NAMES --- */
+        .bar-graph-container {
+            display: grid;
+            /* Column 1: Exactly as wide as the longest name */
+            /* Column 2: The rest of the screen for the bar */
+            grid-template-columns: auto 1fr; 
+            gap: 16px 24px;
+            align-items: center;
         }
 
-        canvas { 
-            width: 100% !important; 
-            height: 100% !important; 
+        .bar-label {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 0.95rem;
+            white-space: nowrap; /* Keeps name on one line */
+            grid-column: 1;
         }
 
-        @media (max-width: 768px) {
-            body { padding: 18px; }
-            .top-bar { 
-                flex-direction: column; 
-                align-items: flex-start;
-                padding: 1.2rem 1.5rem;
+        .bar-wrapper {
+            grid-column: 2;
+            height: 38px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(102, 126, 234, 0.15);
+            position: relative;
+            width: 100%;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%; 
+            transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+        }
+
+        .bar-value {
+            color: white;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        /* Responsive Mobile Layout */
+        @media (max-width: 650px) {
+            .bar-graph-container {
+                grid-template-columns: 1fr; /* Stack name on top of bar */
+                gap: 20px;
             }
-            .title-wrap h1 { font-size: 1.8rem; }
-            .chart-shell { height: 420px; }
-            .panel { padding: 1.5rem; }
+            .bar-label { grid-column: 1; }
+            .bar-wrapper { grid-column: 1; }
+            .title-wrap h1 { font-size: 1.3rem; }
+        }
+
+        @media (min-width: 768px) {
+            .title-wrap h1 { font-size: 2.2rem; }
+            .pill .value { font-size: 1.6rem; }
+        }
+
+        /* --- CARDS --- */
+        .candidates-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .candidate-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
@@ -189,119 +180,137 @@
     <div class="shell">
         <div class="top-bar">
             <div class="title-wrap">
-                <p>Competition Dashboard</p>
+                <p style="color: #667eea; font-weight: 600; text-transform: uppercase; font-size: 0.7rem;">Live Competition</p>
                 <h1>Live Results</h1>
             </div>
             <div class="status">
-                <span class="pulse-dot"></span>
-                <span>Live feed</span>
+                <div class="pulse-dot" style="width:10px; height:10px; background:#22c55e; border-radius:50%; margin-right:8px; animation: pulse 1.5s ease-in-out infinite;"></div>
+                <span style="font-size: 0.85rem; font-weight:700; color:#16a34a; animation: blink 2s ease-in-out infinite;">Live</span>
             </div>
         </div>
 
         <div class="meta">
             <div class="pill">
-                <div class="label"><i class="fas fa-chart-bar"></i> Total votes</div>
+                <div style="color: #666; font-size: 0.8rem;">Total Votes</div>
                 <div class="value" id="total-votes">0</div>
             </div>
             <div class="pill">
-                <div class="label"><i class="fas fa-clock"></i> Last update</div>
+                <div style="color: #666; font-size: 0.8rem;">Last Update</div>
                 <div class="value" id="last-update">—</div>
             </div>
         </div>
 
         <div class="panel">
-            <div class="chart-shell">
-                <canvas id="voteChart"></canvas>
-            </div>
+            <h2 style="margin-bottom: 24px; font-size: 1.2rem;">Vote Distribution</h2>
+            <div class="bar-graph-container" id="bar-graph">
+                </div>
+        </div>
+
+        <div class="panel" style="background: transparent; box-shadow: none; padding: 0;">
+            <div class="candidates-list" id="candidates-list"></div>
         </div>
     </div>
 
     <script>
         var socket = io();
-        var ctx = document.getElementById('voteChart').getContext('2d');
         var totalVotesEl = document.getElementById('total-votes');
         var lastUpdateEl = document.getElementById('last-update');
-
+        
+        // Live clock update every second
+        function updateClock() {
+            const now = new Date();
+            lastUpdateEl.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        }
+        
+        // Update clock immediately and then every second
+        updateClock();
+        setInterval(updateClock, 1000);
+        
         var palette = [
-            'rgba(125, 211, 252, 0.9)',
-            'rgba(192, 132, 252, 0.9)',
-            'rgba(244, 114, 182, 0.9)',
-            'rgba(96, 165, 250, 0.9)',
-            'rgba(52, 211, 153, 0.9)',
-            'rgba(251, 191, 36, 0.9)'
+            { bg: 'rgba(125, 211, 252, 0.9)', border: 'rgb(14, 165, 233)' },
+            { bg: 'rgba(192, 132, 252, 0.9)', border: 'rgb(147, 51, 234)' },
+            { bg: 'rgba(244, 114, 182, 0.9)', border: 'rgb(219, 39, 119)' },
+            { bg: 'rgba(96, 165, 250, 0.9)', border: 'rgb(37, 99, 235)' },
+            { bg: 'rgba(52, 211, 153, 0.9)', border: 'rgb(16, 185, 129)' }
         ];
 
-        var chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['C1', 'C2', 'C3', 'C4'],
-                datasets: [{
-                    label: 'Live votes',
-                    data: [0, 0, 0, 0],
-                    backgroundColor: palette,
-                    borderColor: 'rgba(255,255,255,0.4)',
-                    borderWidth: 1.5,
-                    borderRadius: 10,
-                    maxBarThickness: 80
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: { padding: 10 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(255,255,255,0.08)' },
-                        ticks: { color: 'var(--text-dim)', precision: 0 }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: 'var(--text-main)', font: { size: 14, weight: '600' } }
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: 'var(--text-dim)', boxWidth: 12 } },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                        borderColor: 'rgba(255,255,255,0.08)',
-                        borderWidth: 1,
-                        titleColor: '#fff',
-                        bodyColor: '#dbeafe'
-                    }
-                },
-                animation: {
-                    duration: 650,
-                    easing: 'easeOutCubic'
-                }
-            }
-        });
+        function toTitleCase(str) {
+            return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+        }
 
         function refreshChart(scores) {
             if (!scores || Object.keys(scores).length === 0) return;
 
-            // Extract IDs and sort them
-            var ids = Object.keys(scores).sort(function(a, b) { return Number(a) - Number(b); });
+            const ids = Object.keys(scores);
+            const voteData = ids.map((id, index) => ({
+                id: id,
+                index: index,
+                name: scores[id].name || ('Candidate ' + id),
+                votes: scores[id].votes || 0
+            }));
+
+            const totalVotes = voteData.reduce((sum, item) => sum + item.votes, 0);
+            const rankedData = [...voteData].sort((a, b) => b.votes - a.votes);
+
+            const barGraphEl = document.getElementById('bar-graph');
             
-            // Get names and vote counts
-            var labels = ids.map(function(id) { 
-                return scores[id].name || ('C' + id);
-            });
-            var values = ids.map(function(id) { 
-                return scores[id].votes || 0;
+            // Note: Since we use CSS Grid for layout, we can't easily use 'order' 
+            // for the labels and wrappers separately. Instead, we re-render 
+            // the grid children in the ranked order to keep names and bars aligned.
+            barGraphEl.innerHTML = ''; 
+
+            rankedData.forEach((item) => {
+                const percentage = totalVotes > 0 ? Math.round((item.votes / totalVotes) * 100) : 0;
+                const color = palette[item.index % palette.length];
+                
+                // Create Name Label
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = item.name;
+                
+                // Create Bar Wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bar-wrapper';
+                
+                const fill = document.createElement('div');
+                fill.className = 'bar-fill';        
+                fill.id = 'fill-' + item.id;
+                fill.style.background = `linear-gradient(90deg, ${color.border}, ${color.bg})`;
+                fill.innerHTML = `<div class="bar-value">${item.votes.toLocaleString()} (${percentage}%)</div>`;
+                
+                wrapper.appendChild(fill);
+                barGraphEl.appendChild(label);
+                barGraphEl.appendChild(wrapper);
+
+                // Trigger growth animation
+                setTimeout(() => {
+                    fill.style.width = percentage + '%';
+                }, 50);
             });
 
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = values;
-            chart.data.datasets[0].backgroundColor = values.map(function(_, idx) {
-                return palette[idx % palette.length];
+            // UPDATE CARDS
+            const cardsListEl = document.getElementById('candidates-list');
+            cardsListEl.innerHTML = '';
+            rankedData.forEach((item, index) => {
+                const percentage = totalVotes > 0 ? Math.round((item.votes / totalVotes) * 100) : 0;
+                const rank = index + 1;
+                const card = document.createElement('div');
+                card.className = 'candidate-card';
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight:700;">${rank === 1 ? '👑 ' : ''}${item.name}</div>
+                        <div style="color:#64748b; font-size:0.75rem;">ID: ${item.id}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:1.2rem; font-weight:800; color:#667eea;">${item.votes.toLocaleString()}</div>
+                        <div style="color:#667eea; font-weight:700; font-size:0.8rem;">${percentage}%</div>
+                    </div>
+                `;
+                cardsListEl.appendChild(card);
             });
 
-            var total = values.reduce(function(sum, v) { return sum + Number(v || 0); }, 0);
-            totalVotesEl.textContent = total.toLocaleString();
-            lastUpdateEl.textContent = new Date().toLocaleTimeString();
-
-            chart.update();
+            totalVotesEl.textContent = totalVotes.toLocaleString();
+            // Clock updates automatically via setInterval, no need to update here
         }
 
         socket.on('update_scores', function(scores) {
@@ -310,4 +319,3 @@
     </script>
 </body>
 </html>
-

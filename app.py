@@ -32,6 +32,7 @@ contestants = [
     {"id": 9, "name": "W.M.R.L. Walisundara"},
     {"id": 10, "name": "V. Lochini Weerasekara"},
     {"id": 11, "name": "U.L.C. Bhashitha"},
+    {"id": 12, "name": "Posandu Mapa"},
 ]
 
 # --- DATABASE SETUP ---
