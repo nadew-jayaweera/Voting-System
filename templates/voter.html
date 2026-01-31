@@ -1,345 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Live Voting</title>
+    <title>Cast Your Vote</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
     <style>
-        * { 
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Space Grotesk', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 28px 18px;
-            position: relative;
-            overflow: hidden;
+            display: flex; justify-content: center; padding: 20px 15px; color: #333; overflow-x: hidden;
         }
-
         body::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
+            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
             background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: moveGrid 20s linear infinite;
+            background-size: 50px 50px; animation: moveGrid 20s linear infinite; pointer-events: none; z-index: 0;
         }
+        @keyframes moveGrid { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+        
+        .shell { width: 100%; max-width: 600px; position: relative; z-index: 1; padding-bottom: 80px; }
+        .header { text-align: center; color: white; margin-bottom: 30px; animation: fadeIn 0.8s ease-out; }
+        .header h1 { font-size: 2.5rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .header p { font-size: 1.1rem; opacity: 0.9; margin-top: 5px; }
 
-        @keyframes moveGrid {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
+        .vote-card {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 18px;
+            padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
+        .contestant-name { font-size: 1.3rem; font-weight: 700; color: #1e293b; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .contestant-icon { width: 40px; height: 40px; background: #e0e7ff; color: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .radio-label { position: relative; cursor: pointer; }
+        .radio-label input { position: absolute; opacity: 0; cursor: pointer; }
+        .custom-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;
+            border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 600; color: #64748b; background: white;
+        }
+        
+        .radio-label input[value="yes"]:checked + .custom-btn { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+        .radio-label input[value="no"]:checked + .custom-btn { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
 
-        .frame {
-            width: min(540px, 100%);
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 22px;
-            padding: 3rem 2.5rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            position: relative;
-            z-index: 1;
-            animation: slideIn 0.5s ease-out;
+        .submit-container { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; padding: 0 20px; z-index: 100; }
+        .btn-submit {
+            background: #1e293b; color: white; border: none; padding: 16px 32px; border-radius: 50px;
+            font-size: 1.1rem; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
         }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        
+        .fullscreen-msg {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; width: 90%; background: rgba(255, 255, 255, 0.95);
+            padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
         }
-
-        .eyebrow { 
-            letter-spacing: 0.18em; 
-            text-transform: uppercase; 
-            color: #667eea;
-            font-size: 13px; 
-            margin: 0 0 12px;
-            font-weight: 600;
-        }
-
-        h1 { 
-            margin: 0 0 8px; 
-            font-size: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-
-        p.subtitle { 
-            margin: 0 0 1.5rem; 
-            color: #666;
-            font-size: 1rem;
-        }
-
-        .live-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.15));
-            color: #16a34a;
-            padding: 10px 18px;
-            border-radius: 50px;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            border: 2px solid rgba(34, 197, 94, 0.4);
-            animation: pulse 1.8s infinite;
-            font-size: 0.95rem;
-        }
-
-        .pulse-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
-            animation: dot 1.8s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.35); }
-            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-        }
-
-        @keyframes dot {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-
-        .contestant-label { 
-            font-size: 0.95rem; 
-            color: #666;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        .contestant-name { 
-            color: #667eea;
-            font-weight: 700; 
-            display: block; 
-            font-size: 1.8rem;
-            letter-spacing: 0.5px;
-            margin-bottom: 1.5rem;
-        }
-
-        .vote-controls {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            margin-top: 2rem;
-        }
-
-        .btn-vote {
-            padding: 1.3rem 1rem;
-            border-radius: 16px;
-            border: none;
-            font-size: 1.2rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            color: white;
-        }
-
-        .btn-vote::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.2);
-            transition: left 0.5s ease;
-        }
-
-        .btn-vote:hover::before {
-            left: 100%;
-        }
-
-        .btn-vote:active { 
-            transform: translateY(1px) scale(0.98); 
-        }
-
-        .btn-yes {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
-        }
-
-        .btn-yes:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(34, 197, 94, 0.5);
-        }
-
-        .btn-no {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-no:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(239, 68, 68, 0.5);
-        }
-
-        .btn-vote:disabled { 
-            filter: grayscale(0.6) brightness(0.9); 
-            opacity: 0.6; 
-            box-shadow: none;
-            cursor: not-allowed;
-        }
-
-        .waiting {
-            color: #666;
-            margin-top: 1rem;
-            font-size: 1rem;
-        }
-
-        .icon-wrap { 
-            opacity: 0.5; 
-            margin-bottom: 1.5rem;
-            color: #667eea;
-        }
-
-        .icon-wrap svg {
-            width: 70px;
-            height: 70px;
-        }
-
-        #waiting-area h3 {
-            color: #667eea;
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        #msg { 
-            margin-top: 1.5rem; 
-            font-weight: 700; 
-            color: #f59e0b;
-            min-height: 28px;
-            font-size: 1rem;
-        }
-
-        @media (max-width: 480px) {
-            .frame { padding: 2.5rem 1.5rem; }
-            h1 { font-size: 1.6rem; }
-            .contestant-name { font-size: 1.5rem; }
-            .btn-vote { font-size: 1.1rem; padding: 1.1rem 0.8rem; }
-        }
+        .icon-large { font-size: 3rem; margin-bottom: 20px; color: #667eea; }
+        .spin { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div class="frame">
-        <p class="eyebrow">Live voting</p>
-        <h1>Cast Your Vote</h1>
-        <p class="subtitle">Choose wisely — every vote counts.</p>
 
-        <div id="voting-area" style="display:none;">
-            <div class="live-badge">
-                <span class="pulse-dot"></span>
-                <span>Live now</span>
-            </div>
-            <div class="contestant-label">
-                Performance by
-                <span class="contestant-name" id="c-name"></span>
-            </div>
+    <div id="waiting-area" class="fullscreen-msg">
+        <div class="icon-large"><i class="fas fa-circle-notch spin"></i></div>
+        <h2>Waiting for Admin</h2>
+        <p style="color:#666;">Please watch the presentations.</p>
+    </div>
 
-            <div class="vote-controls">
-                <button id="btn-yes" class="btn btn-vote btn-yes">Yes 👍</button>
-                <button id="btn-no" class="btn btn-vote btn-no">No 👎</button>
-            </div>
+    <div id="done-area" class="fullscreen-msg" style="display: none;">
+        <div id="done-icon" class="icon-large" style="color: #22c55e;"></div>
+        <h2 id="done-title">Votes Submitted!</h2>
+        <p id="done-desc" style="color:#666;">Thank you for participating.</p>
+    </div>
+
+    <div id="voting-area" class="shell" style="display: none;">
+        <div class="header">
+            <h1>Cast Your Vote</h1>
+            <p>Select Yes or No for each contestant</p>
         </div>
-
-        <div id="waiting-area">
-            <div class="icon-wrap">
-                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                    <path d="M5 6.25a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0v-3.5zm3.5 0a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0v-3.5z"/>
-                </svg>
+        <form id="vote-form" onsubmit="submitVotes(event)">
+            <div id="contestants-container"></div>
+            <div class="submit-container">
+                <button type="submit" class="btn-submit">Submit All Votes <i class="fas fa-paper-plane"></i></button>
             </div>
-            <h3 id="wait-title">Voting Closed</h3>
-            <p class="waiting" id="wait-msg">Please wait for the next performance.</p>
-        </div>
-
-        <p id="msg"></p>
+        </form>
     </div>
 
     <script>
-        var socket = io();
-        var btnYes = document.getElementById('btn-yes');
-        var btnNo = document.getElementById('btn-no');
-        var msg = document.getElementById('msg');
-        var votingArea = document.getElementById('voting-area');
-        var waitingArea = document.getElementById('waiting-area');
-        var waitTitle = document.getElementById('wait-title');
-        var waitMsg = document.getElementById('wait-msg');
-        var cName = document.getElementById('c-name');
+        const socket = io();
+        const waitingArea = document.getElementById('waiting-area');
+        const votingArea = document.getElementById('voting-area');
+        const doneArea = document.getElementById('done-area');
+        const container = document.getElementById('contestants-container');
 
-        socket.on('state_change', function(state) {
-            msg.innerText = "";
+        // Done Screen Elements
+        const doneIcon = document.getElementById('done-icon');
+        const doneTitle = document.getElementById('done-title');
+        const doneDesc = document.getElementById('done-desc');
 
-            if (state.active_contestant_id === null) {
-                showWaiting("Voting Closed", "Please wait for the next performance.");
-            } else {
+        socket.on('voting_status', function(data) {
+            if (data.status === 'open') {
+                // OPEN VOTING
                 waitingArea.style.display = 'none';
+                doneArea.style.display = 'none'; // Ensure done screen is hidden
                 votingArea.style.display = 'block';
-                cName.innerText = state.active_contestant_name;
-                btnYes.disabled = false;
-                btnNo.disabled = false;
+
+                container.innerHTML = ''; 
+                data.contestants.forEach(c => {
+                    const card = document.createElement('div');
+                    card.className = 'vote-card';
+                    card.innerHTML = `
+                        <div class="contestant-name">
+                            <div class="contestant-icon"><i class="fas fa-user"></i></div>
+                            ${c.name}
+                        </div>
+                        <div class="options-grid">
+                            <label class="radio-label">
+                                <input type="radio" name="c_${c.id}" value="yes" required>
+                                <span class="custom-btn"><i class="fas fa-thumbs-up"></i> Yes</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="c_${c.id}" value="no" required>
+                                <span class="custom-btn"><i class="fas fa-thumbs-down"></i> No</span>
+                            </label>
+                        </div>`;
+                    container.appendChild(card);
+                });
+
+            } else if (data.status === 'closed') {
+                // CLOSED
+                votingArea.style.display = 'none';
+                doneArea.style.display = 'none'; // <--- THIS LINE WAS MISSING BEFORE
+                waitingArea.style.display = 'block';
+                
+                // Update Waiting Screen Text
+                waitingArea.querySelector('h2').innerText = "Voting Closed";
+                waitingArea.querySelector('p').innerText = "The session has ended.";
+                waitingArea.querySelector('.icon-large').innerHTML = '<i class="fas fa-lock"></i>';
             }
         });
 
-        socket.on('vote_success', function() {
-            showWaiting("Vote Counted", "Thank you for voting!");
-        });
-
-        socket.on('vote_error', function(data) {
-            msg.innerText = data.msg;
-            btnYes.disabled = true;
-            btnNo.disabled = true;
-        });
-
-        function showWaiting(title, message) {
+        // HANDLE CONFIRMATION
+        socket.on('vote_confirmed', function(data) {
+            waitingArea.style.display = 'none';
             votingArea.style.display = 'none';
-            waitingArea.style.display = 'block';
-            waitTitle.innerText = title;
-            waitMsg.innerText = message;
+            doneArea.style.display = 'block';
+
+            if (data.success === false) {
+                // FAILURE
+                doneIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                doneIcon.style.color = "#ef4444"; 
+                doneTitle.innerText = "Vote Rejected";
+                doneDesc.innerText = data.message;
+            } else {
+                // SUCCESS
+                doneIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                doneIcon.style.color = "#22c55e"; 
+                doneTitle.innerText = "Votes Submitted!";
+                doneDesc.innerText = "Thank you for participating.";
+            }
+        });
+
+        function submitVotes(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            let votes = {};
+            for (let [key, value] of formData.entries()) {
+                let id = key.split('_')[1]; 
+                votes[id] = value;
+            }
+            socket.emit('submit_votes', { votes: votes });
         }
-
-        btnYes.onclick = function() {
-            socket.emit('cast_vote', {type: 'yes'});
-            btnYes.disabled = true;
-            btnNo.disabled = true;
-        };
-
-        btnNo.onclick = function() {
-            socket.emit('cast_vote', {type: 'no'});
-            btnYes.disabled = true;
-            btnNo.disabled = true;
-        };
     </script>
 </body>
 </html>

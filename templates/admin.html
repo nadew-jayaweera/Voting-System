@@ -1,378 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Admin Panel</title>
+    <title>Admin Control</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        * { 
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: 'Space Grotesk', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 28px 16px 36px;
-            display: flex;
-            justify-content: center;
-            position: relative;
-            overflow-x: hidden;
+            min-height: 100vh; padding: 30px 15px; color: #333;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: moveGrid 20s linear infinite;
-            z-index: 0;
-        }
-
-        @keyframes moveGrid {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-
-        .shell {
-            width: min(1100px, 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            position: relative;
-            z-index: 1;
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1.5rem 2rem;
-            border-radius: 18px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        h1 { 
-            margin: 0; 
-            font-size: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-
-        .sub { 
-            margin: 6px 0 0; 
-            color: #666;
-            font-size: 0.95rem;
-        }
-
-        .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-
-        .btn-glass {
-            border-radius: 12px;
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            background: rgba(255, 255, 255, 0.9);
-            color: #667eea;
-            padding: 10px 16px;
-            font-weight: 700;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .btn-glass:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-            border-color: rgba(102, 126, 234, 0.5);
-        }
-
-        .btn-glass:active { transform: translateY(0); }
-
-        .btn-glass.logout { 
-            border-color: rgba(102, 126, 234, 0.4); 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-glass.primary { 
-            border-color: rgba(34, 197, 94, 0.4); 
-            color: #16a34a;
-        }
-
-        .btn-glass.warn { 
-            border-color: rgba(245, 158, 11, 0.4); 
-            color: #d97706;
-        }
-
-        .btn-glass.danger { 
-            border-color: rgba(239, 68, 68, 0.4); 
-            color: #dc2626;
-        }
-
+        .shell { max-width: 600px; margin: 0 auto; }
+        
         .panel {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 18px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center;
         }
 
-        .form-inline { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 16px; 
-            align-items: center; 
+        h1 { font-weight: 700; color: #4f46e5; margin-bottom: 30px; }
+
+        .btn-main {
+            width: 100%; padding: 20px; font-size: 1.2rem; font-weight: 700;
+            border: none; border-radius: 15px; margin-bottom: 15px;
+            transition: transform 0.2s; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-main:hover { transform: translateY(-3px); }
+
+        .btn-landing { background: #6366f1; color: white; }
+        .btn-start { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
+        .btn-stop { background: #fee2e2; color: #991b1b; }
+        
+        /* New Reset Button Style */
+        .btn-reset { 
+            background: #ef4444; color: white; 
+            margin-top: 30px; /* Extra space to separate it */
+            font-size: 1rem; padding: 15px;
         }
 
-        .form-inline input { 
-            max-width: 150px; 
-            background: white;
-            border: 2px solid #e0e0e0;
-            color: #333;
-            padding: 10px 14px; 
-            border-radius: 10px;
-            font-weight: 600;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-inline input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        label { 
-            font-weight: 700;
-            color: #333;
-        }
-
-        small { 
-            color: #666;
-            display: block;
-            margin-top: 4px;
-        }
-
-        table { 
-            color: #333;
-            margin: 0; 
-        }
-
-        thead { 
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-        }
-
-        thead th {
-            font-weight: 700;
-            color: #667eea;
-            padding: 14px !important;
-        }
-
-        th, td { 
-            vertical-align: middle; 
-            border-color: #e0e0e0;
-            padding: 12px !important;
-        }
-
-        tbody tr {
-            transition: background-color 0.2s ease;
-        }
-
-        tbody tr:hover { 
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            color: #667eea;
-            padding: 10px 16px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .pill {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 14px;
-        }
-
-        .pill .card-mini {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
-            border: 2px solid rgba(102, 126, 234, 0.2);
-            border-radius: 14px;
-            padding: 14px 16px;
-            transition: all 0.3s ease;
-        }
-
-        .pill .card-mini:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-
-        .card-mini .label { 
-            color: #666;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .card-mini .value { 
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #667eea;
-            margin-top: 6px;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #22c55e, #16a34a) !important;
-            border: none !important;
-            font-weight: 700 !important;
-            padding: 8px 16px !important;
-            transition: all 0.3s ease !important;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4) !important;
-        }
-
-        @media (max-width: 768px) {
-            h1 { font-size: 1.6rem; }
-            .header { padding: 1.2rem 1.5rem; }
-            .actions { width: 100%; }
-            .btn-glass { flex: 1 1 auto; text-align: center; font-size: 0.85rem; padding: 10px 12px; }
+        .status-badge {
+            display: inline-block; padding: 8px 16px; background: #f3f4f6;
+            border-radius: 50px; font-weight: 600; margin-bottom: 20px; color: #6b7280;
         }
     </style>
 </head>
 <body>
     <div class="shell">
-        <div class="header">
-            <div>
-                <h1>Admin Control Panel</h1>
-                <p class="sub">Manage contestants, timers, and live status.</p>
-            </div>
-            <div class="actions">
-                <a href="/logout" class="btn-glass logout">
-                    <i class="fas fa-lock"></i> Logout
-                </a>
-                <a href="/export" class="btn-glass primary">
-                    <i class="fas fa-file-excel"></i> Download Excel
-                </a>
-                <button onclick="stopVoting()" class="btn-glass warn">
-                    <i class="fas fa-pause"></i> Stop Voting
-                </button>
-                <button onclick="resetSystem()" class="btn-glass danger">
-                    <i class="fas fa-triangle-exclamation"></i> Reset All
-                </button>
-            </div>
-        </div>
-
         <div class="panel">
-            <div class="form-inline">
-                <div>
-                    <label>Safety Timeout (seconds)</label><br>
-                    <small>Auto-close (default 30 mins)</small>
-                </div>
-                <input type="number" id="timer-input" class="form-control" value="1800">
-                <span class="status">Live control</span>
-            </div>
-        </div>
+            <h1>Admin Control</h1>
+            
+            <div class="status-badge" id="status-badge">Status: Ready</div>
 
-        <div class="panel">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead><tr><th style="width: 90px;">ID</th><th>Contestant Name</th><th style="width: 160px;" class="text-end">Action</th></tr></thead>
-                    <tbody>
-                        {% for c in contestants %}
-                        <tr>
-                            <td>{{ c.id }}</td>
-                            <td><strong>{{ c.name }}</strong></td>
-                            <td class="text-end">
-                                <button onclick="startVoting({{ c.id }})" class="btn btn-success btn-sm">Start Voting</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <button class="btn-main btn-landing" onclick="showLanding()">
+                <i class="fas fa-home"></i> SHOW LANDING PAGE
+            </button>
 
-        <div class="panel">
-            <div class="pill">
-                <div class="card-mini">
-                    <div class="label">Status</div>
-                    <div class="value" id="status-text">Ready</div>
-                </div>
-                <div class="card-mini">
-                    <div class="label">Active contestant</div>
-                    <div class="value" id="active-name">—</div>
-                </div>
+            <button class="btn-main btn-start" onclick="openVotingSession()">
+                <i class="fas fa-play-circle"></i> OPEN VOTING
+            </button>
+            
+            <button class="btn-main btn-stop" onclick="stopVoting()">
+                <i class="fas fa-stop-circle"></i> STOP VOTING
+            </button>
+
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+            <button class="btn-main btn-reset" onclick="resetSystem()">
+                <i class="fas fa-trash-alt"></i> RESET ALL VOTES
+            </button>
+
+            <div style="margin-top: 20px;">
+                <a href="/logout" style="color: #666; text-decoration: none;">Logout</a>
             </div>
         </div>
     </div>
 
     <script>
-        var socket = io();
+        const socket = io();
+        const badge = document.getElementById('status-badge');
 
-        function startVoting(id) {
-            var seconds = document.getElementById('timer-input').value;
-            socket.emit('admin_start_voting', {id: id, seconds: parseInt(seconds)});
+        function showLanding() {
+            if(confirm("Reset screen to Landing Page?")) {
+                socket.emit('show_landing');
+                badge.innerText = "Status: LANDING PAGE";
+                badge.style.background = "#e0e7ff";
+                badge.style.color = "#4338ca";
+            }
+        }
+
+        function openVotingSession() {
+            if(confirm("Start the voting session now?")) {
+                socket.emit('open_voting_session');
+                badge.innerText = "Status: VOTING OPEN";
+                badge.style.background = "#dcfce7";
+                badge.style.color = "#166534";
+            }
         }
 
         function stopVoting() {
-            socket.emit('admin_stop_voting');
+            if(confirm("End the event?")) {
+                socket.emit('stop_voting');
+                badge.innerText = "Status: CLOSED";
+                badge.style.background = "#fee2e2";
+                badge.style.color = "#991b1b";
+            }
         }
 
+        // RESET FUNCTION
         function resetSystem() {
-            if (confirm("Warning:\n\nThis will DELETE ALL VOTES from the database and reset scores to 0.\n\nDid you download the Excel file first?\n\nAre you sure you want to proceed?")) {
+            if(confirm("⚠️ WARNING ⚠️\n\nThis will PERMANENTLY DELETE all votes.\nIt will also allow people to vote again.\n\nAre you sure you want to reset?")) {
                 socket.emit('admin_reset_data');
+                alert("System Reset. All votes are now 0.");
             }
         }
-
-        socket.on('state_change', function(state) {
-            var statusSpan = document.getElementById('status-text');
-            var activeName = document.getElementById('active-name');
-
-            if (state.active_contestant_id) {
-                statusSpan.textContent = 'Voting LIVE';
-                statusSpan.style.color = '#22c55e'; // Green text for live
-                activeName.textContent = state.active_contestant_name;
-            } else {
-                statusSpan.textContent = 'Voting Closed';
-                statusSpan.style.color = '#ef4444'; // Red text for closed
-                activeName.textContent = '—';
-            }
-        });
     </script>
 </body>
 </html>
