@@ -12,52 +12,74 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Space Grotesk', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 50%, #a855f7 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
-            display: flex; justify-content: center; padding: 20px 15px; color: #333; overflow-x: hidden;
+            display: flex; justify-content: center; padding: 20px 15px; color: white; overflow-x: hidden;
         }
-        body::before {
-            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px; animation: moveGrid 20s linear infinite; pointer-events: none; z-index: 0;
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        @keyframes moveGrid { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
         
         .shell { width: 100%; max-width: 600px; position: relative; z-index: 1; padding-bottom: 80px; }
-        .header { text-align: center; color: white; margin-bottom: 30px; animation: fadeIn 0.8s ease-out; }
-        .header h1 { font-size: 2.5rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .header { text-align: center; color: white; margin-bottom: 30px; animation: fadeIn 0.8s ease-out; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .header h1 { font-size: 2.5rem; font-weight: 700; }
         .header p { font-size: 1.1rem; opacity: 0.9; margin-top: 5px; }
 
         .vote-card {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 18px;
-            padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            background: #ffffff; border-radius: 18px;
+            padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border: 1px solid rgba(15, 23, 42, 0.08); transition: all 0.3s ease;
         }
-        .contestant-name { font-size: 1.3rem; font-weight: 700; color: #1e293b; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .contestant-icon { width: 40px; height: 40px; background: #e0e7ff; color: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .vote-card:hover {
+            background: #f8fafc; border-color: rgba(15, 23, 42, 0.15);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+        }
+        .contestant-name { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .contestant-icon { width: 40px; height: 40px; background: #e2e8f0; color: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .radio-label { position: relative; cursor: pointer; }
         .radio-label input { position: absolute; opacity: 0; cursor: pointer; }
         .custom-btn {
             display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;
-            border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 600; color: #64748b; background: white;
+            border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 600; color: #0f172a; background: #f8fafc;
+            cursor: pointer; transition: all 0.2s ease;
         }
+        .custom-btn:hover {
+            background: #eef2ff; border-color: #cbd5f5;
+        }
+        .custom-btn .fa-thumbs-up { color: #16a34a; }
+        .custom-btn .fa-thumbs-down { color: #dc2626; }
         
-        .radio-label input[value="yes"]:checked + .custom-btn { background: #dcfce7; border-color: #22c55e; color: #15803d; }
-        .radio-label input[value="no"]:checked + .custom-btn { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+        .radio-label input[value="yes"]:checked + .custom-btn { background: #dcfce7; border-color: #22c55e; color: #14532d; box-shadow: 0 0 12px rgba(34, 197, 94, 0.25); }
+        .radio-label input[value="no"]:checked + .custom-btn { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
 
         .submit-container { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; padding: 0 20px; z-index: 100; }
         .btn-submit {
-            background: #1e293b; color: white; border: none; padding: 16px 32px; border-radius: 50px;
+            background: rgba(255, 255, 255, 0.2); color: #000000; border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px 32px; border-radius: 50px;
             font-size: 1.1rem; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
+            backdrop-filter: blur(10px); cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-submit:hover {
+            background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); color: #000000;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+        .btn-submit:active {
+            transform: scale(0.98);
         }
         
         .fullscreen-msg {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; width: 90%; background: rgba(255, 255, 255, 0.95);
-            padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            text-align: center; width: 90%; background: #ffffff;
+            padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 2px solid rgba(15, 23, 42, 0.08); color: #0f172a;
         }
-        .icon-large { font-size: 3rem; margin-bottom: 20px; color: #667eea; }
+        .icon-large { font-size: 3rem; margin-bottom: 20px; color: #0f172a; }
         .spin { animation: spin 2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -68,13 +90,13 @@
     <div id="waiting-area" class="fullscreen-msg">
         <div class="icon-large"><i class="fas fa-circle-notch spin"></i></div>
         <h2>Waiting for Admin</h2>
-        <p style="color:#666;">Please watch the presentations.</p>
+        <p style="color: rgba(15, 23, 42, 0.7);">Please watch the presentations.</p>
     </div>
 
     <div id="done-area" class="fullscreen-msg" style="display: none;">
         <div id="done-icon" class="icon-large" style="color: #22c55e;"></div>
         <h2 id="done-title">Votes Submitted!</h2>
-        <p id="done-desc" style="color:#666;">Thank you for participating.</p>
+        <p id="done-desc" style="color: rgba(15, 23, 42, 0.7);">Thank you for participating.</p>
     </div>
 
     <div id="voting-area" class="shell" style="display: none;">
@@ -130,6 +152,16 @@
                         </div>`;
                     container.appendChild(card);
                 });
+
+            } else if (data.status === 'waiting') {
+                // WAITING (LANDING)
+                votingArea.style.display = 'none';
+                doneArea.style.display = 'none';
+                waitingArea.style.display = 'block';
+
+                waitingArea.querySelector('h2').innerText = "Waiting for Admin";
+                waitingArea.querySelector('p').innerText = "Please watch the presentations.";
+                waitingArea.querySelector('.icon-large').innerHTML = '<i class="fas fa-circle-notch spin"></i>';
 
             } else if (data.status === 'closed') {
                 // CLOSED

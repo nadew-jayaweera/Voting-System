@@ -20,11 +20,20 @@ def init_db():
     count = cur.fetchone()[0]
     
     if count == 0:
-        print("Adding sample contestants...")
+        print("Adding contestants...")
         contestants = [
-            ('Alice', 0, 0),
-            ('Bob', 0, 0),
-            ('Charlie', 0, 0)
+            ('Khadeeja Mohamed Ashraff', 0, 0),
+            ('Tharanjee Dahanayaka', 0, 0),
+            ('S.D. Thalpawila', 0, 0),
+            ('Teesha Hewa Matarage', 0, 0),
+            ('Gallala Gamage Lakna Hansinee', 0, 0),
+            ('K.A.D.S. Jayalath', 0, 0),
+            ('E.A.T.K. Athukorala', 0, 0),
+            ('K.A. Hiruni Pabasara Warnasekara', 0, 0),
+            ('W.M.R.L. Walisundara', 0, 0),
+            ('V. Lochini Weerasekara', 0, 0),
+            ('U.L.C. Bhashitha', 0, 0),
+            ('Posandu Mapa', 0, 0)
         ]
         cur.executemany('INSERT INTO contestants (name, yes_votes, no_votes) VALUES (?, ?, ?)', contestants)
         conn.commit()

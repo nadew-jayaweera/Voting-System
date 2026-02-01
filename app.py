@@ -1,8 +1,12 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 from flask_socketio import SocketIO, emit
 import sqlite3
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from datetime import datetime
+import io
 
 load_dotenv()
 
@@ -57,6 +61,85 @@ def vote():
 def screen():
     return render_template('screen.html')
 
+@app.route('/export_votes')
+def export_votes():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    # Create workbook and worksheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Voting Results"
+    
+    # Add title
+    ws['A1'] = 'Voting System - Results Export'
+    ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
+    ws['A1'].fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A1:D1')
+    
+    # Add export date
+    ws['A2'] = f'Exported on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+    ws['A2'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A2:D2')
+    
+    # Add headers
+    headers = ['ID', 'Contestant Name', 'Yes Votes', 'No Votes']
+    ws.append([])
+    ws.append(headers)
+    
+    # Style headers
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="4f46e5", end_color="4f46e5", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Fetch data from database
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, yes_votes, no_votes FROM contestants ORDER BY yes_votes DESC")
+    rows = cur.fetchall()
+    conn.close()
+    
+    # Add data rows
+    for row in rows:
+        ws.append([row['id'], row['name'], row['yes_votes'], row['no_votes']])
+    
+    # Add total row
+    total_yes = sum(row['yes_votes'] for row in rows)
+    total_no = sum(row['no_votes'] for row in rows)
+    ws.append([])
+    ws.append(['', 'TOTAL', total_yes, total_no])
+    
+    # Style total row
+    last_row = ws.max_row
+    for col in range(1, 5):
+        cell = ws.cell(row=last_row, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="e0e7ff", end_color="e0e7ff", fill_type="solid")
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 15
+    
+    # Save to bytes buffer
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename with timestamp
+    filename = f'voting_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
 # --- SOCKET EVENTS ---
 
 @socketio.on('connect')
@@ -67,7 +150,10 @@ def handle_connect():
     if client_ip in voted_ips:
         emit('vote_confirmed', {'success': False, 'message': 'You have already voted.'})
 
-    if current_state['mode'] in ['VOTING', 'ENDED']:
+    if current_state['mode'] == 'LANDING':
+        # Send waiting status when in LANDING mode
+        emit('voting_status', {'status': 'waiting'})
+    elif current_state['mode'] in ['VOTING', 'STOPPED', 'ENDED']:
         conn = connect_db()
         cur = conn.cursor()
         cur.execute("SELECT id, name, yes_votes FROM contestants")
@@ -79,13 +165,15 @@ def handle_connect():
             cur.execute("SELECT id, name FROM contestants")
             contestants = [{'id': row['id'], 'name': row['name']} for row in cur.fetchall()]
             emit('voting_status', {'status': 'open', 'contestants': contestants})
+        elif current_state['mode'] in ['STOPPED', 'ENDED']:
+            emit('voting_status', {'status': 'closed'})
         conn.close()
 
 @socketio.on('show_landing')
 def handle_show_landing():
     current_state['mode'] = 'LANDING'
     emit('update_screen', {'mode': 'LANDING'}, broadcast=True)
-    emit('voting_status', {'status': 'closed'}, broadcast=True)
+    emit('voting_status', {'status': 'waiting'}, broadcast=True)
 
 @socketio.on('open_voting_session')
 def handle_open_voting():
@@ -137,8 +225,22 @@ def handle_vote_submission(data):
 
 @socketio.on('stop_voting')
 def handle_stop_voting():
-    current_state['mode'] = 'ENDED'
+    current_state['mode'] = 'STOPPED'
     emit('voting_status', {'status': 'closed'}, broadcast=True)
+    emit('update_screen', {'mode': 'STOPPED'}, broadcast=True)
+    
+    # Send current scores to all clients
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, yes_votes FROM contestants")
+    rows = cur.fetchall()
+    scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+    conn.close()
+    emit('update_scores', scores, broadcast=True)
+
+@socketio.on('end_competition')
+def handle_end_competition():
+    current_state['mode'] = 'ENDED'
     emit('update_screen', {'mode': 'ENDED'}, broadcast=True)
 
 @socketio.on('admin_reset_data')

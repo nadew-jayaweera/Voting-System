@@ -36,6 +36,8 @@
         .btn-landing { background: #6366f1; color: white; }
         .btn-start { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
         .btn-stop { background: #fee2e2; color: #991b1b; }
+        .btn-export { background: #10b981; color: white; text-decoration: none; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; font-size: 1.2rem; font-weight: 700; border-radius: 15px; border: none; margin-bottom: 15px; transition: transform 0.2s; cursor: pointer; }
+        .btn-export:hover { transform: translateY(-3px); }
         
         /* New Reset Button Style */
         .btn-reset { 
@@ -69,7 +71,15 @@
                 <i class="fas fa-stop-circle"></i> STOP VOTING
             </button>
 
+            <button class="btn-main" style="background: #fbbf24; color: #78350f;" onclick="endCompetition()">
+                <i class="fas fa-flag-checkered"></i> END COMPETITION
+            </button>
+
             <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+            <button class="btn-main btn-export" onclick="window.location.href='/export_votes'">
+                <i class="fas fa-file-excel"></i> EXPORT TO EXCEL
+            </button>
 
             <button class="btn-main btn-reset" onclick="resetSystem()">
                 <i class="fas fa-trash-alt"></i> RESET ALL VOTES
@@ -104,9 +114,18 @@
         }
 
         function stopVoting() {
-            if(confirm("End the event?")) {
+            if(confirm("Close voting? (Results will remain visible)")) {
                 socket.emit('stop_voting');
-                badge.innerText = "Status: CLOSED";
+                badge.innerText = "Status: VOTING STOPPED";
+                badge.style.background = "#fef3c7";
+                badge.style.color = "#92400e";
+            }
+        }
+
+        function endCompetition() {
+            if(confirm("End the entire competition? (Show final thank you message)")) {
+                socket.emit('end_competition');
+                badge.innerText = "Status: COMPETITION ENDED";
                 badge.style.background = "#fee2e2";
                 badge.style.color = "#991b1b";
             }
