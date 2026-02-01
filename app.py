@@ -16,7 +16,7 @@ socketio = SocketIO(app)
 
 # --- GLOBAL STORAGE ---
 current_state = {'mode': 'LANDING'} 
-voted_ips = set() 
+voted_voter_ids = set() 
 
 def connect_db():
     conn = sqlite3.connect('voting.db')
@@ -144,11 +144,24 @@ def export_votes():
 
 @socketio.on('connect')
 def handle_connect():
-    client_ip = request.remote_addr
     emit('update_screen', {'mode': current_state['mode']})
+    if current_state['mode'] in ['VOTING', 'STOPPED', 'ENDED']:
+        conn = connect_db()
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, yes_votes FROM contestants")
+        rows = cur.fetchall()
+        scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+        conn.close()
+        emit('update_scores', scores)
 
-    if client_ip in voted_ips:
+@socketio.on('register_voter')
+def handle_register_voter(data):
+    voter_id = data.get('voter_id')
+    
+    # Check if already voted
+    if voter_id and voter_id in voted_voter_ids:
         emit('vote_confirmed', {'success': False, 'message': 'You have already voted.'})
+        return
 
     if current_state['mode'] == 'LANDING':
         # Send waiting status when in LANDING mode
@@ -161,7 +174,7 @@ def handle_connect():
         scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
         emit('update_scores', scores)
 
-        if current_state['mode'] == 'VOTING' and client_ip not in voted_ips:
+        if current_state['mode'] == 'VOTING':
             cur.execute("SELECT id, name FROM contestants")
             contestants = [{'id': row['id'], 'name': row['name']} for row in cur.fetchall()]
             emit('voting_status', {'status': 'open', 'contestants': contestants})
@@ -177,8 +190,8 @@ def handle_show_landing():
 
 @socketio.on('open_voting_session')
 def handle_open_voting():
-    global voted_ips
-    voted_ips.clear() 
+    global voted_voter_ids
+    voted_voter_ids.clear() 
     current_state['mode'] = 'VOTING'
 
     conn = connect_db()
@@ -196,8 +209,12 @@ def handle_open_voting():
 
 @socketio.on('submit_votes')
 def handle_vote_submission(data):
-    client_ip = request.remote_addr
-    if client_ip in voted_ips:
+    voter_id = data.get('voter_id')
+    if not voter_id:
+        emit('vote_confirmed', {'success': False, 'message': '⚠️ Error: Invalid voter ID!'}, room=request.sid)
+        return
+    
+    if voter_id in voted_voter_ids:
         emit('vote_confirmed', {'success': False, 'message': '⚠️ Error: You have already voted!'}, room=request.sid)
         return
 
@@ -219,7 +236,7 @@ def handle_vote_submission(data):
     for row in rows:
         scores[row['id']] = {'name': row['name'], 'votes': row['yes_votes']}
 
-    voted_ips.add(client_ip)
+    voted_voter_ids.add(voter_id)
     emit('update_scores', scores, broadcast=True)
     emit('vote_confirmed', {'success': True, 'message': 'Votes Submitted Successfully!'}, room=request.sid)
 
@@ -245,8 +262,8 @@ def handle_end_competition():
 
 @socketio.on('admin_reset_data')
 def handle_reset_data():
-    global voted_ips
-    voted_ips.clear() 
+    global voted_voter_ids
+    voted_voter_ids.clear() 
     
     conn = connect_db()
     cur = conn.cursor()

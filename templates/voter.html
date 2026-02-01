@@ -113,6 +113,17 @@
     </div>
 
     <script>
+        // Generate or retrieve unique voter ID from localStorage
+        function getVoterId() {
+            let voterId = localStorage.getItem('voter_id');
+            if (!voterId) {
+                voterId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('voter_id', voterId);
+            }
+            return voterId;
+        }
+        const voterId = getVoterId();
+
         const socket = io();
         const waitingArea = document.getElementById('waiting-area');
         const votingArea = document.getElementById('voting-area');
@@ -123,6 +134,11 @@
         const doneIcon = document.getElementById('done-icon');
         const doneTitle = document.getElementById('done-title');
         const doneDesc = document.getElementById('done-desc');
+
+        // Send voter ID when connected
+        socket.on('connect', function() {
+            socket.emit('register_voter', { voter_id: voterId });
+        });
 
         socket.on('voting_status', function(data) {
             if (data.status === 'open') {
@@ -205,7 +221,7 @@
                 let id = key.split('_')[1]; 
                 votes[id] = value;
             }
-            socket.emit('submit_votes', { votes: votes });
+            socket.emit('submit_votes', { votes: votes, voter_id: voterId });
         }
     </script>
 </body>
