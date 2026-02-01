@@ -1,96 +1,57 @@
-import time
 import os
-import sqlite3
-import pandas as pd
-from threading import Timer
-from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, make_response
-from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
+from flask_socketio import SocketIO, emit
+import sqlite3
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from datetime import datetime
+import io
 
-# 1. LOAD SECRETS
 load_dotenv()
 
 app = Flask(__name__)
-# Ensure Secret Key is consistent.
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET', 'fallback_fixed_key_999')
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET', 'fallback_secret')
+socketio = SocketIO(app)
 
-# 2. GET CONFIG FROM .ENV
-ADMIN_PASSWORD = (os.getenv('ADMIN_PASSWORD') or "1234").strip()
-ADMIN_PATH = (os.getenv('ADMIN_URL_PATH') or "/admin").strip()
+# --- GLOBAL STORAGE ---
+current_state = {'mode': 'LANDING'} 
+voted_ips = set() 
 
-# --- DATA ---
-contestants = [
-    {"id": 1, "name": "Khadeeja Mohamed Ashraff"},
-    {"id": 2, "name": "Tharanjee Dahanayaka"},
-    {"id": 3, "name": "S.D. Thalpawila"},
-    {"id": 4, "name": "Teesha Hewa Matarage"},
-    {"id": 5, "name": "Gallala Gamage Lakna Hansinee"},
-    {"id": 6, "name": "K.A.D.S. Jayalath"},
-    {"id": 7, "name": "E.A.T.K. Athukorala"},
-    {"id": 8, "name": "K.A. Hiruni Pabasara Warnasekara"},
-    {"id": 9, "name": "W.M.R.L. Walisundara"},
-    {"id": 10, "name": "V. Lochini Weerasekara"},
-    {"id": 11, "name": "U.L.C. Bhashitha"},
-    {"id": 12, "name": "Posandu Mapa"},
-]
-
-# --- DATABASE SETUP ---
-DB_NAME = "voting.db"
-
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS votes
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  contestant_id INTEGER,
-                  contestant_name TEXT,
-                  vote_type TEXT,
-                  voter_ip TEXT,
-                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# --- GLOBAL STATE ---
-yes_counts = {c['id']: 0 for c in contestants}
-no_counts = {c['id']: 0 for c in contestants}
-
-# Create a mapping of contestant IDs to names
-contestant_names = {c['id']: c['name'] for c in contestants}
-
-current_state = {
-    "active_contestant_id": None,
-    "active_contestant_name": "",
-    "end_time": 0 
-}
-
-round_voters = set()
-
-# --- HELPER: GET REAL IP ---
-def get_client_ip():
-    if 'X-Forwarded-For' in request.headers:
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    return request.remote_addr
-
-# --- HELPER: GET SCORES WITH NAMES ---
-def get_scores_with_names():
-    """Return scores with contestant names for frontend display"""
-    scores_data = {}
-    for c_id, count in yes_counts.items():
-        name = contestant_names.get(c_id, f'C{c_id}')
-        scores_data[c_id] = {
-            'name': name,
-            'votes': count
-        }
-    return scores_data
+def connect_db():
+    conn = sqlite3.connect('voting.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # --- ROUTES ---
 
 @app.route('/')
 def index():
     return render_template('welcome.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == os.getenv('ADMIN_PASSWORD'):
+            session['logged_in'] = True
+            return redirect(os.getenv('ADMIN_URL_PATH'))
+        else:
+            error = "Invalid Password"
+    return render_template('login.html', error=error)
+
+# --- NEW LOGOUT ROUTE ---
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route(os.getenv('ADMIN_URL_PATH', '/admin'))
+def admin():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    return render_template('admin.html')
 
 @app.route('/vote')
 def vote():
@@ -100,175 +61,204 @@ def vote():
 def screen():
     return render_template('screen.html')
 
-# --- LOGIN SYSTEM ---
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    # If already logged in, send them straight to admin
-    if session.get('is_admin'):
-        return redirect(ADMIN_PATH)
-
-    if request.method == 'POST':
-        password_input = (request.form.get('password') or "").strip()
-        
-        if password_input == ADMIN_PASSWORD:
-            session['is_admin'] = True
-            session.permanent = True  # Keep logged in (until logout)
-            return redirect(ADMIN_PATH)
-        else:
-            flash('Invalid Password')
-            
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.clear() # Destroy the "VIP Pass"
-    return redirect(url_for('login'))
-
-# --- THE HIDDEN ADMIN ROUTE ---
-@app.route(ADMIN_PATH)
-def admin_panel():
-    # SECURITY CHECK
-    if not session.get('is_admin'):
+@app.route('/export_votes')
+def export_votes():
+    if not session.get('logged_in'):
         return redirect(url_for('login'))
     
-    # RENDER WITH NO CACHE (Security Fix)
-    # This prevents the "Back Button" from showing the page after logout
-    response = make_response(render_template('admin.html', contestants=contestants))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
-
-@app.route('/export')
-def export_results():
-    if not session.get('is_admin'):
-        return redirect(url_for('login'))
-
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM votes", conn)
+    # Create workbook and worksheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Voting Results"
+    
+    # Add title
+    ws['A1'] = 'Voting System - Results Export'
+    ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
+    ws['A1'].fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A1:D1')
+    
+    # Add export date
+    ws['A2'] = f'Exported on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+    ws['A2'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A2:D2')
+    
+    # Add headers
+    headers = ['ID', 'Contestant Name', 'Yes Votes', 'No Votes']
+    ws.append([])
+    ws.append(headers)
+    
+    # Style headers
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="4f46e5", end_color="4f46e5", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Fetch data from database
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, yes_votes, no_votes FROM contestants ORDER BY yes_votes DESC")
+    rows = cur.fetchall()
     conn.close()
-
-    if df.empty:
-        return "No votes recorded yet!"
-
-    summary = df.pivot_table(
-        index='contestant_name', 
-        columns='vote_type', 
-        values='id', 
-        aggfunc='count', 
-        fill_value=0
+    
+    # Add data rows
+    for row in rows:
+        ws.append([row['id'], row['name'], row['yes_votes'], row['no_votes']])
+    
+    # Add total row
+    total_yes = sum(row['yes_votes'] for row in rows)
+    total_no = sum(row['no_votes'] for row in rows)
+    ws.append([])
+    ws.append(['', 'TOTAL', total_yes, total_no])
+    
+    # Style total row
+    last_row = ws.max_row
+    for col in range(1, 5):
+        cell = ws.cell(row=last_row, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="e0e7ff", end_color="e0e7ff", fill_type="solid")
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 15
+    
+    # Save to bytes buffer
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename with timestamp
+    filename = f'voting_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
     )
-    summary['Total Votes'] = summary.get('yes', 0) + summary.get('no', 0)
-
-    filename = "Competition_Results.xlsx"
-    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-        summary.to_excel(writer, sheet_name='Summary Table')
-        df.to_excel(writer, sheet_name='Raw Audit Log', index=False)
-        
-    return send_file(filename, as_attachment=True)
 
 # --- SOCKET EVENTS ---
 
-def auto_close_voting():
-    with app.app_context():
-        if current_state['active_contestant_id'] is not None:
-            stop_voting()
-
 @socketio.on('connect')
 def handle_connect():
-    user_ip = get_client_ip()
-    emit('update_scores', get_scores_with_names())
-    emit('state_change', current_state)
-    if user_ip in round_voters:
-        emit('vote_success', {}, to=request.sid)
+    client_ip = request.remote_addr
+    emit('update_screen', {'mode': current_state['mode']})
 
-@socketio.on('admin_start_voting')
-def start_voting(data):
-    if not session.get('is_admin'): return 
+    if client_ip in voted_ips:
+        emit('vote_confirmed', {'success': False, 'message': 'You have already voted.'})
+
+    if current_state['mode'] == 'LANDING':
+        # Send waiting status when in LANDING mode
+        emit('voting_status', {'status': 'waiting'})
+    elif current_state['mode'] in ['VOTING', 'STOPPED', 'ENDED']:
+        conn = connect_db()
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, yes_votes FROM contestants")
+        rows = cur.fetchall()
+        scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+        emit('update_scores', scores)
+
+        if current_state['mode'] == 'VOTING' and client_ip not in voted_ips:
+            cur.execute("SELECT id, name FROM contestants")
+            contestants = [{'id': row['id'], 'name': row['name']} for row in cur.fetchall()]
+            emit('voting_status', {'status': 'open', 'contestants': contestants})
+        elif current_state['mode'] in ['STOPPED', 'ENDED']:
+            emit('voting_status', {'status': 'closed'})
+        conn.close()
+
+@socketio.on('show_landing')
+def handle_show_landing():
+    current_state['mode'] = 'LANDING'
+    emit('update_screen', {'mode': 'LANDING'}, broadcast=True)
+    emit('voting_status', {'status': 'waiting'}, broadcast=True)
+
+@socketio.on('open_voting_session')
+def handle_open_voting():
+    global voted_ips
+    voted_ips.clear() 
+    current_state['mode'] = 'VOTING'
+
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM contestants")
+    all_contestants = [{'id': row['id'], 'name': row['name']} for row in cur.fetchall()]
+    cur.execute("SELECT id, name, yes_votes FROM contestants")
+    rows = cur.fetchall()
+    scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+    conn.close()
     
-    global round_voters
-    c_id = int(data['id'])
-    duration = int(data.get('seconds', 1800)) 
-    
-    c_name = next((c['name'] for c in contestants if c['id'] == c_id), "Unknown")
+    emit('update_screen', {'mode': 'VOTING'}, broadcast=True)
+    emit('voting_status', {'status': 'open', 'contestants': all_contestants}, broadcast=True)
+    emit('update_scores', scores, broadcast=True)
 
-    current_state['active_contestant_id'] = c_id
-    current_state['active_contestant_name'] = c_name
-    current_state['end_time'] = time.time() + duration 
-    
-    round_voters.clear()
+@socketio.on('submit_votes')
+def handle_vote_submission(data):
+    client_ip = request.remote_addr
+    if client_ip in voted_ips:
+        emit('vote_confirmed', {'success': False, 'message': '⚠️ Error: You have already voted!'}, room=request.sid)
+        return
 
-    emit('state_change', current_state, broadcast=True)
-    t = Timer(duration, auto_close_voting)
-    t.start()
-
-@socketio.on('admin_stop_voting')
-def stop_voting():
-    if not session.get('is_admin'): return 
-
-    current_state['active_contestant_id'] = None
-    current_state['active_contestant_name'] = ""
-    current_state['end_time'] = 0
-    emit('state_change', current_state, broadcast=True)
-
-@socketio.on('admin_reset_data')
-def reset_data():
-    if not session.get('is_admin'): return 
-
-    global yes_counts, no_counts, round_voters
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("DELETE FROM votes") 
+    votes = data['votes']
+    conn = connect_db()
+    cur = conn.cursor()
+    for c_id, vote_val in votes.items():
+        if vote_val == 'yes':
+            cur.execute("UPDATE contestants SET yes_votes = yes_votes + 1 WHERE id = ?", (c_id,))
+        elif vote_val == 'no':
+            cur.execute("UPDATE contestants SET no_votes = no_votes + 1 WHERE id = ?", (c_id,))
     conn.commit()
+    
+    cur.execute("SELECT id, name, yes_votes FROM contestants")
+    rows = cur.fetchall()
     conn.close()
 
-    yes_counts = {c['id']: 0 for c in contestants}
-    no_counts = {c['id']: 0 for c in contestants}
-    round_voters.clear()
-    
-    stop_voting() 
-    emit('update_scores', get_scores_with_names(), broadcast=True)
+    scores = {}
+    for row in rows:
+        scores[row['id']] = {'name': row['name'], 'votes': row['yes_votes']}
 
-@socketio.on('cast_vote')
-def handle_vote(data):
-    voter_ip = get_client_ip()
-    vote_type = data.get('type', 'yes') 
-    
-    if current_state['active_contestant_id'] is None:
-        return 
-    
-    if time.time() > current_state['end_time']:
-        emit('vote_error', {'msg': 'Voting session expired'}, to=request.sid)
-        stop_voting()
-        return
+    voted_ips.add(client_ip)
+    emit('update_scores', scores, broadcast=True)
+    emit('vote_confirmed', {'success': True, 'message': 'Votes Submitted Successfully!'}, room=request.sid)
 
-    if voter_ip in round_voters:
-        emit('vote_error', {'msg': 'Already voted!'}, to=request.sid)
-        return
+@socketio.on('stop_voting')
+def handle_stop_voting():
+    current_state['mode'] = 'STOPPED'
+    emit('voting_status', {'status': 'closed'}, broadcast=True)
+    emit('update_screen', {'mode': 'STOPPED'}, broadcast=True)
+    
+    # Send current scores to all clients
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, yes_votes FROM contestants")
+    rows = cur.fetchall()
+    scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+    conn.close()
+    emit('update_scores', scores, broadcast=True)
 
-    c_id = current_state['active_contestant_id']
-    c_name = current_state['active_contestant_name']
-    
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("INSERT INTO votes (contestant_id, contestant_name, vote_type, voter_ip) VALUES (?, ?, ?, ?)", 
-                  (c_id, c_name, vote_type, voter_ip))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print("DB Error:", e)
+@socketio.on('end_competition')
+def handle_end_competition():
+    current_state['mode'] = 'ENDED'
+    emit('update_screen', {'mode': 'ENDED'}, broadcast=True)
 
-    if vote_type == 'yes':
-        yes_counts[c_id] += 1
-    else:
-        no_counts[c_id] += 1
+@socketio.on('admin_reset_data')
+def handle_reset_data():
+    global voted_ips
+    voted_ips.clear() 
     
-    round_voters.add(voter_ip)
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE contestants SET yes_votes = 0, no_votes = 0")
+    conn.commit()
     
-    emit('vote_success', {}, to=request.sid)
-    emit('update_scores', get_scores_with_names(), broadcast=True)
+    cur.execute("SELECT id, name, yes_votes FROM contestants")
+    rows = cur.fetchall()
+    scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+    conn.close()
+    
+    emit('update_scores', scores, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, debug=True, host='0.0.0.0')

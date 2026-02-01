@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,7 +15,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Space Grotesk', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -141,6 +142,7 @@
             font-size: 1rem;
             transition: all 0.3s ease;
             background: #f8f9fa;
+            width: 100%; /* Ensure input takes full width */
         }
 
         .form-control:focus {
@@ -216,6 +218,9 @@
             margin-bottom: 1.5rem;
             border: none;
             animation: shake 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         @keyframes shake {
@@ -301,13 +306,11 @@
                 <p class="login-subtitle">Enter your credentials to continue</p>
             </div>
             
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div class="alert alert-danger" role="alert">
-                        <i class="fas fa-exclamation-circle"></i> {{ messages[0] }}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> {{ error }}
+                </div>
+            {% endif %}
 
             <form method="POST" action="/login" id="loginForm">
                 <div class="form-group">
@@ -374,7 +377,8 @@
         
         loginForm.addEventListener('submit', function() {
             loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
-            loginButton.disabled = true;
+            // We don't disable immediately to allow form data submission, 
+            // but the UI feedback is instant.
         });
     </script>
 </body>
