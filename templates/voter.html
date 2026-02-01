@@ -50,7 +50,9 @@
             border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 600; color: #0f172a; background: #f8fafc;
             cursor: pointer; transition: all 0.2s ease;
         }
-        .custom-btn:hover { background: #eef2ff; border-color: #cbd5f5; }
+        .custom-btn:hover {
+            background: #eef2ff; border-color: #cbd5f5;
+        }
         .custom-btn .fa-thumbs-up { color: #16a34a; }
         .custom-btn .fa-thumbs-down { color: #dc2626; }
         
@@ -67,13 +69,15 @@
             background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); color: #000000;
             box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
-        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
         
         .fullscreen-msg {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; width: 90%; background: #ffffff;
             padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            border: 2px solid rgba(15, 23, 42, 0.08); color: #0f172a; display: none;
+            border: 2px solid rgba(15, 23, 42, 0.08); color: #0f172a;
         }
         .icon-large { font-size: 3rem; margin-bottom: 20px; color: #0f172a; }
         .spin { animation: spin 2s linear infinite; }
@@ -89,7 +93,7 @@
         <p style="color: rgba(15, 23, 42, 0.7);">Please watch the presentations.</p>
     </div>
 
-    <div id="done-area" class="fullscreen-msg">
+    <div id="done-area" class="fullscreen-msg" style="display: none;">
         <div id="done-icon" class="icon-large" style="color: #22c55e;"></div>
         <h2 id="done-title">Votes Submitted!</h2>
         <p id="done-desc" style="color: rgba(15, 23, 42, 0.7);">Thank you for participating.</p>
@@ -109,50 +113,48 @@
     </div>
 
     <script>
+        // Generate or retrieve unique voter ID from localStorage
+        function getVoterId() {
+            let voterId = localStorage.getItem('voter_id');
+            if (!voterId) {
+                voterId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('voter_id', voterId);
+            }
+            return voterId;
+        }
+        const voterId = getVoterId();
+
         const socket = io();
         const waitingArea = document.getElementById('waiting-area');
         const votingArea = document.getElementById('voting-area');
         const doneArea = document.getElementById('done-area');
         const container = document.getElementById('contestants-container');
 
+        // Done Screen Elements
         const doneIcon = document.getElementById('done-icon');
         const doneTitle = document.getElementById('done-title');
         const doneDesc = document.getElementById('done-desc');
 
-        // --- 1. THE INVISIBLE STAMP CHECK ---
-        function checkLocalStamp() {
-            return localStorage.getItem('hasVoted') === 'true';
-        }
-
-        // On Load Check
-        if (checkLocalStamp()) {
-            showDoneScreen(true, "You have already voted.");
-        } else {
-            waitingArea.style.display = 'block'; 
-        }
+        // Send voter ID when connected
+        socket.on('connect', function() {
+            socket.emit('register_voter', { voter_id: voterId });
+        });
 
         socket.on('voting_status', function(data) {
-            // Block user if they have the stamp
-            if (checkLocalStamp()) {
-                showDoneScreen(true, "You have already voted.");
-                return;
-            }
-
             if (data.status === 'open') {
+                // OPEN VOTING
                 waitingArea.style.display = 'none';
-                doneArea.style.display = 'none';
+                doneArea.style.display = 'none'; // Ensure done screen is hidden
                 votingArea.style.display = 'block';
 
                 container.innerHTML = ''; 
                 data.contestants.forEach(c => {
                     const card = document.createElement('div');
                     card.className = 'vote-card';
-                    
-                    // --- 2. XSS FIX: Safe Name Injection ---
                     card.innerHTML = `
                         <div class="contestant-name">
                             <div class="contestant-icon"><i class="fas fa-user"></i></div>
-                            <span class="safe-name"></span>
+                            ${c.name}
                         </div>
                         <div class="options-grid">
                             <label class="radio-label">
@@ -164,24 +166,26 @@
                                 <span class="custom-btn"><i class="fas fa-thumbs-down"></i> No</span>
                             </label>
                         </div>`;
-                    
-                    // Safely set text content
-                    card.querySelector('.safe-name').innerText = c.name;
                     container.appendChild(card);
                 });
 
             } else if (data.status === 'waiting') {
+                // WAITING (LANDING)
                 votingArea.style.display = 'none';
                 doneArea.style.display = 'none';
                 waitingArea.style.display = 'block';
+
                 waitingArea.querySelector('h2').innerText = "Waiting for Admin";
                 waitingArea.querySelector('p').innerText = "Please watch the presentations.";
                 waitingArea.querySelector('.icon-large').innerHTML = '<i class="fas fa-circle-notch spin"></i>';
 
             } else if (data.status === 'closed') {
+                // CLOSED
                 votingArea.style.display = 'none';
-                doneArea.style.display = 'none';
+                doneArea.style.display = 'none'; // <--- THIS LINE WAS MISSING BEFORE
                 waitingArea.style.display = 'block';
+                
+                // Update Waiting Screen Text
                 waitingArea.querySelector('h2').innerText = "Voting Closed";
                 waitingArea.querySelector('p').innerText = "The session has ended.";
                 waitingArea.querySelector('.icon-large').innerHTML = '<i class="fas fa-lock"></i>';
@@ -190,37 +194,24 @@
 
         // HANDLE CONFIRMATION
         socket.on('vote_confirmed', function(data) {
-            if (data.success) {
-                // Apply Invisible Stamp on Success
-                localStorage.setItem('hasVoted', 'true');
-                showDoneScreen(true, "Votes Submitted Successfully!");
-            } else {
-                showDoneScreen(false, data.message);
-            }
-        });
-
-        // --- 3. HANDLE ADMIN RESET ---
-        socket.on('system_reset', function() {
-            localStorage.removeItem('hasVoted');
-            location.reload();
-        });
-
-        function showDoneScreen(isSuccess, message) {
             waitingArea.style.display = 'none';
             votingArea.style.display = 'none';
             doneArea.style.display = 'block';
 
-            if (isSuccess) {
-                doneIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                doneIcon.style.color = "#22c55e"; 
-                doneTitle.innerText = "Status";
-            } else {
+            if (data.success === false) {
+                // FAILURE
                 doneIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
                 doneIcon.style.color = "#ef4444"; 
                 doneTitle.innerText = "Vote Rejected";
+                doneDesc.innerText = data.message;
+            } else {
+                // SUCCESS
+                doneIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                doneIcon.style.color = "#22c55e"; 
+                doneTitle.innerText = "Votes Submitted!";
+                doneDesc.innerText = "Thank you for participating.";
             }
-            doneDesc.innerText = message;
-        }
+        });
 
         function submitVotes(event) {
             event.preventDefault();
@@ -230,7 +221,7 @@
                 let id = key.split('_')[1]; 
                 votes[id] = value;
             }
-            socket.emit('submit_votes', { votes: votes });
+            socket.emit('submit_votes', { votes: votes, voter_id: voterId });
         }
     </script>
 </body>

@@ -1,5 +1,4 @@
 import os
-import uuid
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 from flask_socketio import SocketIO, emit
@@ -16,13 +15,8 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET', 'fallback_secret')
 socketio = SocketIO(app)
 
 # --- GLOBAL STORAGE ---
-current_state = {'mode': 'LANDING'}
-voted_voter_ids = set()
-
-def get_voter_id():
-    if 'voter_id' not in session:
-        session['voter_id'] = uuid.uuid4().hex
-    return session['voter_id']
+current_state = {'mode': 'LANDING'} 
+voted_voter_ids = set() 
 
 def connect_db():
     conn = sqlite3.connect('voting.db')
@@ -47,6 +41,7 @@ def login():
             error = "Invalid Password"
     return render_template('login.html', error=error)
 
+# --- NEW LOGOUT ROUTE ---
 @app.route('/logout')
 def logout():
     session.clear()
@@ -60,7 +55,6 @@ def admin():
 
 @app.route('/vote')
 def vote():
-    get_voter_id()
     return render_template('voter.html')
 
 @app.route('/screen')
@@ -72,55 +66,105 @@ def export_votes():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
+    # Create workbook and worksheet
     wb = Workbook()
     ws = wb.active
     ws.title = "Voting Results"
     
+    # Add title
     ws['A1'] = 'Voting System - Results Export'
     ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
     ws['A1'].fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center")
     ws.merge_cells('A1:D1')
     
+    # Add export date
     ws['A2'] = f'Exported on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+    ws['A2'].alignment = Alignment(horizontal="center")
     ws.merge_cells('A2:D2')
     
+    # Add headers
     headers = ['ID', 'Contestant Name', 'Yes Votes', 'No Votes']
     ws.append([])
     ws.append(headers)
     
+    # Style headers
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="4f46e5", end_color="4f46e5", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Fetch data from database
     conn = connect_db()
     cur = conn.cursor()
     cur.execute("SELECT id, name, yes_votes, no_votes FROM contestants ORDER BY yes_votes DESC")
     rows = cur.fetchall()
     conn.close()
     
+    # Add data rows
     for row in rows:
         ws.append([row['id'], row['name'], row['yes_votes'], row['no_votes']])
     
+    # Add total row
+    total_yes = sum(row['yes_votes'] for row in rows)
+    total_no = sum(row['no_votes'] for row in rows)
+    ws.append([])
+    ws.append(['', 'TOTAL', total_yes, total_no])
+    
+    # Style total row
+    last_row = ws.max_row
+    for col in range(1, 5):
+        cell = ws.cell(row=last_row, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="e0e7ff", end_color="e0e7ff", fill_type="solid")
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 15
+    
+    # Save to bytes buffer
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
+    
+    # Generate filename with timestamp
+    filename = f'voting_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'voting_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        download_name=filename
     )
 
 # --- SOCKET EVENTS ---
 
 @socketio.on('connect')
 def handle_connect():
-    voter_id = session.get('voter_id')
     emit('update_screen', {'mode': current_state['mode']})
+    if current_state['mode'] in ['VOTING', 'STOPPED', 'ENDED']:
+        conn = connect_db()
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, yes_votes FROM contestants")
+        rows = cur.fetchall()
+        scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
+        conn.close()
+        emit('update_scores', scores)
 
-    # If already voted (based on session ID), tell them immediately
+@socketio.on('register_voter')
+def handle_register_voter(data):
+    voter_id = data.get('voter_id')
+    
+    # Check if already voted
     if voter_id and voter_id in voted_voter_ids:
         emit('vote_confirmed', {'success': False, 'message': 'You have already voted.'})
+        return
 
     if current_state['mode'] == 'LANDING':
+        # Send waiting status when in LANDING mode
         emit('voting_status', {'status': 'waiting'})
     elif current_state['mode'] in ['VOTING', 'STOPPED', 'ENDED']:
         conn = connect_db()
@@ -130,7 +174,7 @@ def handle_connect():
         scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
         emit('update_scores', scores)
 
-        if current_state['mode'] == 'VOTING' and (not voter_id or voter_id not in voted_voter_ids):
+        if current_state['mode'] == 'VOTING':
             cur.execute("SELECT id, name FROM contestants")
             contestants = [{'id': row['id'], 'name': row['name']} for row in cur.fetchall()]
             emit('voting_status', {'status': 'open', 'contestants': contestants})
@@ -146,8 +190,8 @@ def handle_show_landing():
 
 @socketio.on('open_voting_session')
 def handle_open_voting():
-    # Note: open_voting_session does NOT clear history. 
-    # Use reset button for that.
+    global voted_voter_ids
+    voted_voter_ids.clear() 
     current_state['mode'] = 'VOTING'
 
     conn = connect_db()
@@ -165,9 +209,11 @@ def handle_open_voting():
 
 @socketio.on('submit_votes')
 def handle_vote_submission(data):
-    voter_id = get_voter_id()
+    voter_id = data.get('voter_id')
+    if not voter_id:
+        emit('vote_confirmed', {'success': False, 'message': '⚠️ Error: Invalid voter ID!'}, room=request.sid)
+        return
     
-    # Server-Side Check
     if voter_id in voted_voter_ids:
         emit('vote_confirmed', {'success': False, 'message': '⚠️ Error: You have already voted!'}, room=request.sid)
         return
@@ -184,11 +230,13 @@ def handle_vote_submission(data):
     
     cur.execute("SELECT id, name, yes_votes FROM contestants")
     rows = cur.fetchall()
-    scores = {row['id']: {'name': row['name'], 'votes': row['yes_votes']} for row in rows}
     conn.close()
 
+    scores = {}
+    for row in rows:
+        scores[row['id']] = {'name': row['name'], 'votes': row['yes_votes']}
+
     voted_voter_ids.add(voter_id)
-    
     emit('update_scores', scores, broadcast=True)
     emit('vote_confirmed', {'success': True, 'message': 'Votes Submitted Successfully!'}, room=request.sid)
 
@@ -198,6 +246,7 @@ def handle_stop_voting():
     emit('voting_status', {'status': 'closed'}, broadcast=True)
     emit('update_screen', {'mode': 'STOPPED'}, broadcast=True)
     
+    # Send current scores to all clients
     conn = connect_db()
     cur = conn.cursor()
     cur.execute("SELECT id, name, yes_votes FROM contestants")
@@ -206,10 +255,15 @@ def handle_stop_voting():
     conn.close()
     emit('update_scores', scores, broadcast=True)
 
+@socketio.on('end_competition')
+def handle_end_competition():
+    current_state['mode'] = 'ENDED'
+    emit('update_screen', {'mode': 'ENDED'}, broadcast=True)
+
 @socketio.on('admin_reset_data')
 def handle_reset_data():
     global voted_voter_ids
-    voted_voter_ids.clear()
+    voted_voter_ids.clear() 
     
     conn = connect_db()
     cur = conn.cursor()
@@ -222,9 +276,6 @@ def handle_reset_data():
     conn.close()
     
     emit('update_scores', scores, broadcast=True)
-    
-    # --- IMPORTANT: Clears the client-side stamp ---
-    emit('system_reset', broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=False, host='0.0.0.0')
+    socketio.run(app, debug=True, host='0.0.0.0')
