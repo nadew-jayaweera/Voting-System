@@ -1,91 +1,560 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Cast Your Vote</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    
+
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: 'Space Grotesk', sans-serif;
             background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 50%, #a855f7 100%);
             background-size: 400% 400%;
             animation: gradientShift 15s ease infinite;
             min-height: 100vh;
-            display: flex; justify-content: center; padding: 20px 15px; color: white; overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            padding: 20px 15px;
+            color: white;
+            overflow-x: hidden;
         }
 
         @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        .shell { width: 100%; max-width: 600px; position: relative; z-index: 1; padding-bottom: 80px; }
-        .header { text-align: center; color: white; margin-bottom: 30px; animation: fadeIn 0.8s ease-out; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .header h1 { font-size: 2.5rem; font-weight: 700; }
-        .header p { font-size: 1.1rem; opacity: 0.9; margin-top: 5px; }
+            0% {
+                background-position: 0% 50%;
+            }
 
-        .vote-card {
-            background: #ffffff; border-radius: 18px;
-            padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            border: 1px solid rgba(15, 23, 42, 0.08); transition: all 0.3s ease;
-        }
-        .vote-card:hover {
-            background: #f8fafc; border-color: rgba(15, 23, 42, 0.15);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
-        }
-        .contestant-name { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .contestant-icon { width: 40px; height: 40px; background: #e2e8f0; color: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        
-        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .radio-label { position: relative; cursor: pointer; }
-        .radio-label input { position: absolute; opacity: 0; cursor: pointer; }
-        .custom-btn {
-            display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;
-            border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 600; color: #0f172a; background: #f8fafc;
-            cursor: pointer; transition: all 0.2s ease;
-        }
-        .custom-btn:hover {
-            background: #eef2ff; border-color: #cbd5f5;
-        }
-        .custom-btn .fa-thumbs-up { color: #16a34a; }
-        .custom-btn .fa-thumbs-down { color: #dc2626; }
-        
-        .radio-label input[value="yes"]:checked + .custom-btn { background: #dcfce7; border-color: #22c55e; color: #14532d; box-shadow: 0 0 12px rgba(34, 197, 94, 0.25); }
-        .radio-label input[value="no"]:checked + .custom-btn { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
+            50% {
+                background-position: 100% 50%;
+            }
 
-        .submit-container { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; padding: 0 20px; z-index: 100; }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .shell {
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            z-index: 1;
+            padding-bottom: 120px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: slideDownFadeIn 0.6s ease-out;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        /* Selection Indicator Badge */
+        .selection-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            animation: slideDownFadeIn 0.7s ease-out;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .selection-indicator span {
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .selection-indicator .selected-name {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-radius: 8px;
+            font-weight: 700;
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+            }
+        }
+
+        .vote-card-selector {
+            cursor: pointer;
+            display: block;
+            margin-bottom: 16px;
+            animation: slideUpFadeIn 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .vote-card-selector:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .vote-card-selector:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .vote-card-selector:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .vote-card-selector:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .vote-card-selector:nth-child(5) {
+            animation-delay: 0.5s;
+        }
+
+        .vote-card-selector:nth-child(6) {
+            animation-delay: 0.6s;
+        }
+
+        .vote-card-selector:nth-child(7) {
+            animation-delay: 0.7s;
+        }
+
+        .vote-card-selector:nth-child(8) {
+            animation-delay: 0.8s;
+        }
+
+        .vote-card-selector:nth-child(9) {
+            animation-delay: 0.9s;
+        }
+
+        .vote-card-selector:nth-child(10) {
+            animation-delay: 1.0s;
+        }
+
+        .vote-card-selector:nth-child(11) {
+            animation-delay: 1.1s;
+        }
+
+        .vote-card-selector:nth-child(12) {
+            animation-delay: 1.2s;
+        }
+
+        .vote-card-selector:nth-child(13) {
+            animation-delay: 1.3s;
+        }
+
+        .vote-card-selector:nth-child(14) {
+            animation-delay: 1.4s;
+        }
+
+        .vote-card-selector:nth-child(15) {
+            animation-delay: 1.5s;
+        }
+
+        .vote-card-selector:nth-child(16) {
+            animation-delay: 1.6s;
+        }
+
+        .vote-card-selector:nth-child(17) {
+            animation-delay: 1.7s;
+        }
+
+        .vote-card-selector:nth-child(18) {
+            animation-delay: 1.8s;
+        }
+
+        .vote-card-selector:nth-child(19) {
+            animation-delay: 1.9s;
+        }
+
+        .vote-card-selector:nth-child(20) {
+            animation-delay: 2.0s;
+        }
+
+        .vote-card-selector input[type="radio"] {
+            display: none;
+        }
+
+        .vote-card-selector .contestant-name {
+            padding: 20px 22px;
+            border-radius: 16px;
+            border: 3px solid #e2e8f0;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin: 0;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Shimmer effect */
+        .vote-card-selector .contestant-name::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        /* Check mark indicator */
+        .vote-card-selector .contestant-name::after {
+            content: '\f058';
+            /* Font Awesome check-circle */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 22px;
+            font-size: 1.5rem;
+            color: #16a34a;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .vote-card-selector:hover .contestant-name {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-color: #7c3aed;
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.2);
+            transform: translateX(6px) scale(1.01);
+        }
+
+        .vote-card-selector:hover .contestant-name::before {
+            left: 100%;
+        }
+
+        /* Selected state */
+        .vote-card-selector input[type="radio"]:checked~.contestant-name {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-color: #16a34a;
+            color: #14532d;
+            box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.15), 0 12px 36px rgba(34, 197, 94, 0.3);
+            transform: scale(1.03);
+        }
+
+        .vote-card-selector input[type="radio"]:checked~.contestant-name::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .vote-card-selector input[type="radio"]:checked~.contestant-name .contestant-icon {
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .contestant-icon {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            color: #475569;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .vote-card-selector:hover .contestant-icon {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            color: #7c3aed;
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        .submit-container {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            z-index: 100;
+            animation: slideUpFadeIn 0.8s ease-out;
+            gap: 10px;
+        }
+
         .btn-submit {
-            background: rgba(255, 255, 255, 0.2); color: #000000; border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px 32px; border-radius: 50px;
-            font-size: 1.1rem; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
-            backdrop-filter: blur(10px); cursor: pointer; transition: all 0.3s ease;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: #ffffff;
+            border: none;
+            padding: 18px 45px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            box-shadow: 0 10px 35px rgba(34, 197, 94, 0.35);
+            width: 100%;
+            max-width: 500px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.5px;
         }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
         .btn-submit:hover {
-            background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); color: #000000;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            box-shadow: 0 15px 45px rgba(34, 197, 94, 0.5);
+            transform: translateY(-3px);
         }
+
+        .btn-submit:hover::before {
+            width: 350px;
+            height: 350px;
+        }
+
         .btn-submit:active {
-            transform: scale(0.98);
+            transform: scale(0.96) translateY(-1px);
         }
-        
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+
         .fullscreen-msg {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; width: 90%; background: #ffffff;
-            padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            border: 2px solid rgba(15, 23, 42, 0.08); color: #0f172a;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            background: #ffffff;
+            padding: 50px 40px;
+            border-radius: 28px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+            border: 2px solid rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+            animation: zoomIn 0.5s ease-out;
         }
-        .icon-large { font-size: 3rem; margin-bottom: 20px; color: #0f172a; }
-        .spin { animation: spin 2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .icon-large {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #0f172a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 100px;
+            background: #f3f4f6;
+            border-radius: 50%;
+        }
+
+        .spin {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideDownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUpFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.7);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+
+        /* Error Notification Toast */
+        .error-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 3px solid #ef4444;
+            border-radius: 16px;
+            padding: 18px 28px;
+            box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 320px;
+            max-width: 500px;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .error-notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .error-notification .error-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            animation: errorPulse 0.5s ease-out;
+        }
+
+        .error-notification .error-content {
+            flex: 1;
+        }
+
+        .error-notification .error-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #7f1d1d;
+            margin-bottom: 2px;
+        }
+
+        .error-notification .error-message {
+            font-size: 0.95rem;
+            color: #991b1b;
+            font-weight: 500;
+        }
+
+        @keyframes errorPulse {
+            0% {
+                transform: scale(0.8);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
     </style>
 </head>
+
 <body>
+
+    <!-- Error Notification Toast -->
+    <div id="error-notification" class="error-notification">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="error-content">
+            <div class="error-title">Selection Required</div>
+            <div class="error-message">Please select a contestant before submitting your vote.</div>
+        </div>
+    </div>
 
     <div id="waiting-area" class="fullscreen-msg">
         <div class="icon-large"><i class="fas fa-circle-notch spin"></i></div>
@@ -102,12 +571,18 @@
     <div id="voting-area" class="shell" style="display: none;">
         <div class="header">
             <h1>Cast Your Vote</h1>
-            <p>Select Yes or No for each contestant</p>
+            <p>Select one contestant to vote for</p>
+        </div>
+        <div id="selection-badge" class="selection-indicator" style="display: none;">
+            <span>You're voting for:</span>
+            <span class="selected-name" id="selected-contestant-name"></span>
         </div>
         <form id="vote-form" onsubmit="submitVotes(event)">
             <div id="contestants-container"></div>
             <div class="submit-container">
-                <button type="submit" class="btn-submit">Submit All Votes <i class="fas fa-paper-plane"></i></button>
+                <button type="submit" class="btn-submit" id="submit-btn">
+                    <i class="fas fa-vote-yea"></i> Submit Your Vote
+                </button>
             </div>
         </form>
     </div>
@@ -118,7 +593,7 @@
             let voterId = localStorage.getItem('voter_id');
             if (!voterId) {
                 voterId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('voter_id', voterId);
+                localStorage.setItem('voter_id', voterId); Vote
             }
             return voterId;
         }
@@ -136,37 +611,43 @@
         const doneDesc = document.getElementById('done-desc');
 
         // Send voter ID when connected
-        socket.on('connect', function() {
+        socket.on('connect', function () {
             socket.emit('register_voter', { voter_id: voterId });
         });
 
-        socket.on('voting_status', function(data) {
+        socket.on('voting_status', function (data) {
             if (data.status === 'open') {
                 // OPEN VOTING
                 waitingArea.style.display = 'none';
                 doneArea.style.display = 'none'; // Ensure done screen is hidden
                 votingArea.style.display = 'block';
 
-                container.innerHTML = ''; 
+                container.innerHTML = '';
                 data.contestants.forEach(c => {
-                    const card = document.createElement('div');
-                    card.className = 'vote-card';
+                    const card = document.createElement('label');
+                    card.className = 'vote-card vote-card-selector';
                     card.innerHTML = `
+                        <input type="radio" name="selected_contestant" value="${c.id}">
                         <div class="contestant-name">
                             <div class="contestant-icon"><i class="fas fa-user"></i></div>
-                            ${c.name}
-                        </div>
-                        <div class="options-grid">
-                            <label class="radio-label">
-                                <input type="radio" name="c_${c.id}" value="yes" required>
-                                <span class="custom-btn"><i class="fas fa-thumbs-up"></i> Yes</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="c_${c.id}" value="no" required>
-                                <span class="custom-btn"><i class="fas fa-thumbs-down"></i> No</span>
-                            </label>
+                            <span>${c.name}</span>
                         </div>`;
                     container.appendChild(card);
+                });
+
+                // Add event listeners to show selection indicator
+                const radioButtons = document.querySelectorAll('input[name="selected_contestant"]');
+                const selectionBadge = document.getElementById('selection-badge');
+                const selectedNameDisplay = document.getElementById('selected-contestant-name');
+
+                radioButtons.forEach(radio => {
+                    radio.addEventListener('change', function () {
+                        if (this.checked) {
+                            const selectedLabel = this.nextElementSibling.querySelector('span').textContent;
+                            selectedNameDisplay.textContent = selectedLabel;
+                            selectionBadge.style.display = 'block';
+                        }
+                    });
                 });
 
             } else if (data.status === 'waiting') {
@@ -184,7 +665,7 @@
                 votingArea.style.display = 'none';
                 doneArea.style.display = 'none'; // <--- THIS LINE WAS MISSING BEFORE
                 waitingArea.style.display = 'block';
-                
+
                 // Update Waiting Screen Text
                 waitingArea.querySelector('h2').innerText = "Voting Closed";
                 waitingArea.querySelector('p').innerText = "The session has ended.";
@@ -193,7 +674,7 @@
         });
 
         // HANDLE CONFIRMATION
-        socket.on('vote_confirmed', function(data) {
+        socket.on('vote_confirmed', function (data) {
             waitingArea.style.display = 'none';
             votingArea.style.display = 'none';
             doneArea.style.display = 'block';
@@ -201,28 +682,45 @@
             if (data.success === false) {
                 // FAILURE
                 doneIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
-                doneIcon.style.color = "#ef4444"; 
+                doneIcon.style.color = "#ef4444";
                 doneTitle.innerText = "Vote Rejected";
                 doneDesc.innerText = data.message;
             } else {
                 // SUCCESS
                 doneIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                doneIcon.style.color = "#22c55e"; 
+                doneIcon.style.color = "#22c55e";
                 doneTitle.innerText = "Votes Submitted!";
                 doneDesc.innerText = "Thank you for participating.";
             }
         });
 
+        // Function to show error notification
+        function showErrorNotification() {
+            const errorNotif = document.getElementById('error-notification');
+            errorNotif.classList.add('show');
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                errorNotif.classList.remove('show');
+            }, 3000);
+        }
+
         function submitVotes(event) {
             event.preventDefault();
             const formData = new FormData(event.target);
-            let votes = {};
-            for (let [key, value] of formData.entries()) {
-                let id = key.split('_')[1]; 
-                votes[id] = value;
+            const selectedContestant = formData.get('selected_contestant');
+
+            if (!selectedContestant) {
+                showErrorNotification();
+                return;
             }
-            socket.emit('submit_votes', { votes: votes, voter_id: voterId });
+
+            socket.emit('submit_votes', {
+                votes: { [selectedContestant]: 'yes' },
+                voter_id: voterId
+            });
         }
     </script>
 </body>
+
 </html>

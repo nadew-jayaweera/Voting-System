@@ -1,35 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Live Screen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Space Grotesk', sans-serif;
             background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 50%, #a855f7 100%);
             background-size: 400% 400%;
             animation: gradientShift 15s ease infinite;
-            color: white; min-height: 100vh; overflow-y: auto;
+            color: white;
+            min-height: 100vh;
+            overflow-y: auto;
             position: relative;
         }
 
         @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         /* Animated background particles */
         body::before {
             content: '';
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-image: 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
                 radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
                 radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
@@ -49,22 +67,22 @@
             z-index: 1;
             padding: 40px;
         }
-        
+
         .landing-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            padding: 60px 80px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(25px);
+            border-radius: 35px;
+            padding: 70px 90px;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
             animation: floatUp 1.2s ease-out;
         }
 
         .big-title {
-            font-size: 5rem;
+            font-size: 5.5rem;
             font-weight: 800;
             margin-bottom: 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -73,37 +91,50 @@
         }
 
         .sub-title {
-            font-size: 1.8rem;
+            font-size: 2rem;
             opacity: 0.95;
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
 
         .landing-icon {
-            font-size: 4rem;
-            margin-bottom: 30px;
-            animation: none;
+            font-size: 5rem;
+            margin-bottom: 35px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 8px 20px rgba(251, 191, 36, 0.4));
         }
 
         @keyframes floatUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes titlePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
 
-        @keyframes iconSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.03);
+            }
         }
 
         /* --- RESULTS SCREEN --- */
         #results-screen {
             display: none;
-            padding: 20px 40px;
+            padding: 30px 50px;
             position: relative;
             z-index: 1;
             overflow-y: auto;
@@ -112,38 +143,44 @@
 
         .results-header {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 35px;
             animation: fadeInDown 0.8s ease-out;
         }
 
         .results-header h1 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 800;
-            margin-bottom: 8px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin-bottom: 12px;
+            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.4);
             background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .results-header .subtitle {
-            font-size: 1rem;
-            opacity: 0.9;
-            font-weight: 500;
+            font-size: 1.2rem;
+            opacity: 0.92;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
         }
 
         .live-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(239, 68, 68, 0.9);
-            padding: 5px 15px;
+            gap: 10px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            padding: 8px 20px;
             border-radius: 50px;
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            margin-top: 8px;
+            margin-top: 10px;
             animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
         }
 
         .live-dot {
@@ -155,95 +192,169 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.06);
+            }
         }
 
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         #graph-area {
-            max-width: 1400px;
+            max-width: 1500px;
             margin: 0 auto;
         }
 
         .bar-container {
             background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.4s ease;
+            backdrop-filter: blur(15px);
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             animation: slideIn 0.6s ease-out;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         }
 
         .bar-container:hover {
-            transform: translateX(10px);
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateX(15px) scale(1.02);
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .rank-badge {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             font-weight: 800;
-            min-width: 45px;
-            height: 45px;
+            min-width: 55px;
+            height: 55px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            border-radius: 14px;
+            box-shadow: 0 5px 20px rgba(148, 163, 184, 0.4);
+            position: relative;
         }
 
+        /* TOP 3 WITH ICONS */
         .bar-container:nth-child(1) .rank-badge {
             background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
-            font-size: 1.6rem;
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.7);
+            font-size: 2rem;
+        }
+
+        .bar-container:nth-child(1) .rank-badge::before {
+            content: '\f091';
+            /* Trophy */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            font-size: 1.8rem;
+            color: #78350f;
         }
 
         .bar-container:nth-child(2) .rank-badge {
-            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-            box-shadow: 0 6px 20px rgba(192, 192, 192, 0.5);
+            background: linear-gradient(135deg, #e5e7eb 0%, #f3f4f6 100%);
+            box-shadow: 0 7px 25px rgba(192, 192, 192, 0.6);
+            font-size: 1.7rem;
+        }
+
+        .bar-container:nth-child(2) .rank-badge::before {
+            content: '\f521';
+            /* Medal */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            font-size: 1.6rem;
+            color: #475569;
         }
 
         .bar-container:nth-child(3) .rank-badge {
-            background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
-            box-shadow: 0 6px 20px rgba(205, 127, 50, 0.5);
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            box-shadow: 0 7px 25px rgba(249, 115, 22, 0.6);
+            font-size: 1.6rem;
+        }
+
+        .bar-container:nth-child(3) .rank-badge::before {
+            content: '\f521';
+            /* Medal */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            font-size: 1.5rem;
+            color: #431407;
         }
 
         .contestant-info {
-            flex: 0 0 250px;
+            flex: 0 0 280px;
             text-align: left;
         }
 
         .bar-label {
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            margin-bottom: 3px;
-            line-height: 1.2;
+            margin-bottom: 5px;
+            line-height: 1.3;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .vote-count-label {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            font-weight: 500;
+            font-size: 0.9rem;
+            opacity: 0.88;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .vote-number {
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #fbbf24;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
         }
 
         .bar-progress-wrapper {
@@ -253,61 +364,86 @@
 
         .bar-wrapper {
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            height: 38px;
+            border-radius: 14px;
+            height: 45px;
             width: 100%;
             overflow: hidden;
             position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
-            border-radius: 12px;
+            border-radius: 14px;
             width: 0%;
-            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            padding-right: 15px;
+            padding-right: 18px;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             color: white;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Winner bar special gradient */
+        .bar-container:nth-child(1) .bar-fill {
+            background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
         }
 
         .bar-fill::before {
             content: '';
             position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: shimmer 2s infinite;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmerMove 2.5s infinite;
         }
 
         @keyframes shimmer {
-            100% { left: 100%; }
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @keyframes shimmerMove {
+            100% {
+                left: 100%;
+            }
         }
 
         .percentage-label {
             position: absolute;
-            right: 12px;
+            right: 15px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 0.9rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 800;
             color: white;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-        }
-
-        .live-dot {
-            width: 10px;
-            height: 10px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
         }
     </style>
 </head>
+
 <body>
 
     <div id="landing-screen">
@@ -338,7 +474,7 @@
         const subTitle = document.getElementById('sub-title');
         const graphArea = document.getElementById('graph-area');
 
-        socket.on('update_screen', function(data) {
+        socket.on('update_screen', function (data) {
             if (data.mode === 'LANDING') {
                 resultsScreen.style.display = 'none';
                 landingScreen.style.display = 'flex';
@@ -355,7 +491,7 @@
             }
         });
 
-        socket.on('update_scores', function(scores) {
+        socket.on('update_scores', function (scores) {
             if (!scores) return;
 
             const list = Object.entries(scores).map(([id, data]) => ({
@@ -364,57 +500,68 @@
                 votes: data.votes
             }));
 
+            // Sort by votes (descending)
             list.sort((a, b) => b.votes - a.votes);
 
             const leaderVotes = list.length > 0 ? Math.max(list[0].votes, 1) : 1;
+
+            // Clear and rebuild to maintain proper order
+            graphArea.innerHTML = '';
 
             list.forEach((item, index) => {
                 const percent = (item.votes / leaderVotes) * 100;
                 const rank = index + 1;
 
-                let row = document.getElementById(`bar-row-${item.id}`);
-
-                if (!row) {
-                    row = document.createElement('div');
-                    row.id = `bar-row-${item.id}`;
-                    row.className = 'bar-container';
-                    row.innerHTML = `
-                        <div class="rank-badge">${rank}</div>
-                        <div class="contestant-info">
-                            <div class="bar-label">${item.name}</div>
-                            <div class="vote-count-label"><i class="fas fa-thumbs-up"></i> <span class="vote-number">0</span> votes</div>
+                // Create new row for each competitor
+                const row = document.createElement('div');
+                row.id = `bar-row-${item.id}`;
+                row.className = 'bar-container';
+                row.innerHTML = `
+                    <div class="rank-badge">${rank > 3 ? rank : ''}</div>
+                    <div class="contestant-info">
+                        <div class="bar-label">${item.name}</div>
+                        <div class="vote-count-label">
+                            <i class="fas fa-thumbs-up"></i> 
+                            <span class="vote-number">${item.votes}</span> votes
                         </div>
-                        <div class="bar-progress-wrapper">
-                            <div class="bar-wrapper">
-                                <div class="bar-fill" style="width: 0%;"></div>
-                            </div>
-                            <div class="percentage-label">${percent.toFixed(1)}%</div>
+                    </div>
+                    <div class="bar-progress-wrapper">
+                        <div class="bar-wrapper">
+                            <div class="bar-fill" style="width: 0%;"></div>
                         </div>
-                    `;
-                    graphArea.appendChild(row);
-                }
+                        <div class="percentage-label">${percent.toFixed(1)}%</div>
+                    </div>
+                `;
 
-                // Update rank badge
-                const rankBadge = row.querySelector('.rank-badge');
-                rankBadge.innerText = rank;
+                graphArea.appendChild(row);
 
-                // Update vote count
-                const voteNumber = row.querySelector('.vote-number');
-                voteNumber.innerText = item.votes;
-
-                // Update percentage
-                const percentLabel = row.querySelector('.percentage-label');
-                percentLabel.innerText = `${percent.toFixed(1)}%`;
-
-                // Update bar fill
+                // Animate the bar fill
                 const fill = row.querySelector('.bar-fill');
                 setTimeout(() => {
                     fill.style.width = `${percent}%`;
-                }, 10);
-
-                graphArea.appendChild(row);
+                }, 50);
             });
         });
+
+        // Animate vote count numbers
+        function animateValue(element, start, end, duration) {
+            const startTime = performance.now();
+            const difference = end - start;
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const current = Math.floor(start + difference * progress);
+                element.innerText = current;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
     </script>
 </body>
+
 </html>
