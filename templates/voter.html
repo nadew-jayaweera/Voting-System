@@ -593,7 +593,7 @@
             let voterId = localStorage.getItem('voter_id');
             if (!voterId) {
                 voterId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('voter_id', voterId); Vote
+                localStorage.setItem('voter_id', voterId);
             }
             return voterId;
         }
